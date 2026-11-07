@@ -1,0 +1,19 @@
+#!/usr/bin/bash
+# Первый запуск: подключает Flathub и ставит программы из flatpaks.list.
+set -euo pipefail
+
+LIST=/usr/share/astramars/flatpaks.list
+MARK_DIR=/var/lib/astramars
+MARK="$MARK_DIR/flatpak-setup-done"
+
+flatpak remote-add --system --if-not-exists flathub \
+    https://dl.flathub.org/repo/flathub.flatpakrepo
+
+mapfile -t apps < <(grep -vE '^\s*(#|$)' "$LIST")
+
+if [ "${#apps[@]}" -gt 0 ]; then
+    flatpak install --system --noninteractive --or-update flathub "${apps[@]}"
+fi
+
+mkdir -p "$MARK_DIR"
+touch "$MARK"

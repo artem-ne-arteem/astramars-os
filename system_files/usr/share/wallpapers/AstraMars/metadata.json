@@ -1,0 +1,12 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "AstraMars OS"
+            }
+        ],
+        "Id": "AstraMars",
+        "License": "CC-BY-SA-4.0",
+        "Name": "AstraMars"
+    }
+}

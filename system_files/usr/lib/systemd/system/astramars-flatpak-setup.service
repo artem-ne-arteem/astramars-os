@@ -1,0 +1,14 @@
+[Unit]
+Description=AstraMars OS: установка программ при первом запуске
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/astramars/flatpak-setup-done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/astramars-flatpak-setup
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

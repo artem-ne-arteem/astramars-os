@@ -1,0 +1,19 @@
+[Plugins]
+# Размытие под прозрачными панелями и меню
+blurEnabled=true
+# Сворачивание окон «волшебной лампой» в панель
+magiclampEnabled=true
+squashEnabled=false
+# Окна плавно появляются и исчезают
+scaleEnabled=true
+fadeEnabled=false
+# «Желейные» окна выключены по умолчанию — включаются в Настройках → Эффекты
+wobblywindowsEnabled=false
+
+[Effect-blur]
+BlurStrength=10
+NoiseStrength=3
+
+[org.kde.kdecoration2]
+library=org.kde.breeze
+theme=Breeze

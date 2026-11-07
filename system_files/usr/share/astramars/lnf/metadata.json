@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "AstraMars OS"
+            }
+        ],
+        "Description": "Тёмная тема AstraMars OS",
+        "Description[en]": "AstraMars OS dark theme",
+        "Id": "org.astramars.desktop",
+        "License": "GPL-2.0-or-later",
+        "Name": "AstraMars",
+        "Version": "1.0"
+    },
+    "X-Plasma-MainScript": "defaults"
+}

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3840 2160" width="3840" height="2160" preserveAspectRatio="xMidYMid slice">
+  <!-- Обои AstraMars OS: тёмный космос, Марс и яркая звезда Астра -->
+  <defs>
+    <radialGradient id="space" cx="70%" cy="58%" r="85%">
+      <stop offset="0" stop-color="#1c1030"/>
+      <stop offset="0.45" stop-color="#0d0b1c"/>
+      <stop offset="1" stop-color="#04050b"/>
+    </radialGradient>
+    <radialGradient id="mars" cx="36%" cy="32%" r="78%">
+      <stop offset="0" stop-color="#ffab73"/>
+      <stop offset="0.35" stop-color="#f06a32"/>
+      <stop offset="0.75" stop-color="#9c2f10"/>
+      <stop offset="1" stop-color="#3d1006"/>
+    </radialGradient>
+    <linearGradient id="night" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0.45" stop-color="#05040a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#05040a" stop-opacity="0.85"/>
+    </linearGradient>
+    <radialGradient id="atmo" cx="50%" cy="50%" r="50%">
+      <stop offset="0.82" stop-color="#ff7a45" stop-opacity="0"/>
+      <stop offset="0.9" stop-color="#ff7a45" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ff7a45" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="star" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.12" stop-color="#fff2c4" stop-opacity="0.9"/>
+      <stop offset="0.4" stop-color="#ffcf73" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#ffcf73" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="140"/>
+    </filter>
+    <clipPath id="planetClip"><circle cx="2760" cy="1300" r="560"/></clipPath>
+  </defs>
+
+  <rect width="3840" height="2160" fill="url(#space)"/>
+
+  <!-- туманности -->
+  <g filter="url(#blur)">
+    <ellipse cx="900" cy="1500" rx="900" ry="380" fill="#6b2fa8" opacity="0.28"/>
+    <ellipse cx="2300" cy="600" rx="800" ry="300" fill="#2f4fa8" opacity="0.18"/>
+    <ellipse cx="3000" cy="1500" rx="700" ry="500" fill="#ff6a2c" opacity="0.14"/>
+  </g>
+
+  <!-- звёзды -->
+  <g fill="#ffffff">
+    <circle cx="180" cy="160" r="3" opacity="0.8"/><circle cx="420" cy="520" r="2" opacity="0.6"/>
+    <circle cx="640" cy="260" r="2.5" opacity="0.7"/><circle cx="860" cy="880" r="2" opacity="0.5"/>
+    <circle cx="300" cy="1180" r="3" opacity="0.7"/><circle cx="560" cy="1720" r="2" opacity="0.5"/>
+    <circle cx="160" cy="1960" r="2.5" opacity="0.6"/><circle cx="1020" cy="1980" r="2" opacity="0.5"/>
+    <circle cx="1420" cy="1580" r="3" opacity="0.7"/><circle cx="1600" cy="320" r="2" opacity="0.6"/>
+    <circle cx="1860" cy="760" r="2.5" opacity="0.7"/><circle cx="1980" cy="1260" r="2" opacity="0.5"/>
+    <circle cx="2140" cy="180" r="3" opacity="0.8"/><circle cx="2380" cy="1900" r="2" opacity="0.6"/>
+    <circle cx="2520" cy="420" r="2" opacity="0.5"/><circle cx="2900" cy="220" r="2.5" opacity="0.7"/>
+    <circle cx="3260" cy="520" r="3" opacity="0.8"/><circle cx="3560" cy="200" r="2" opacity="0.6"/>
+    <circle cx="3700" cy="820" r="2.5" opacity="0.7"/><circle cx="3600" cy="1980" r="2" opacity="0.5"/>
+    <circle cx="3420" cy="2060" r="3" opacity="0.6"/><circle cx="2000" cy="2080" r="2" opacity="0.5"/>
+    <circle cx="1240" cy="420" r="2" opacity="0.6"/><circle cx="760" cy="620" r="1.5" opacity="0.5"/>
+    <circle cx="1720" cy="1060" r="1.5" opacity="0.5"/><circle cx="2260" cy="980" r="1.5" opacity="0.4"/>
+    <circle cx="3100" cy="760" r="1.5" opacity="0.5"/><circle cx="3780" cy="1360" r="1.5" opacity="0.5"/>
+    <circle cx="80" cy="760" r="1.5" opacity="0.5"/><circle cx="1180" cy="1260" r="1.5" opacity="0.4"/>
+  </g>
+
+  <!-- орбита -->
+  <ellipse cx="2760" cy="1300" rx="1180" ry="300" fill="none" stroke="#ffb78a" stroke-width="3" opacity="0.18" transform="rotate(-14 2760 1300)"/>
+
+  <!-- Марс -->
+  <circle cx="2760" cy="1300" r="660" fill="url(#atmo)"/>
+  <circle cx="2760" cy="1300" r="560" fill="url(#mars)"/>
+  <g clip-path="url(#planetClip)" fill="#5a1606">
+    <ellipse cx="2560" cy="1140" rx="90" ry="55" opacity="0.35"/>
+    <ellipse cx="2900" cy="1460" rx="150" ry="70" opacity="0.3"/>
+    <ellipse cx="2820" cy="1060" rx="45" ry="28" opacity="0.3"/>
+    <ellipse cx="2440" cy="1440" rx="60" ry="34" opacity="0.25"/>
+    <path d="M2180 1360 Q2760 1520 3340 1280" stroke="#ffd0ad" stroke-width="22" fill="none" opacity="0.15"/>
+    <rect x="2100" y="640" width="1320" height="1320" fill="url(#night)" opacity="1"/>
+  </g>
+
+  <!-- звезда Астра -->
+  <g transform="translate(1180 700)">
+    <circle r="260" fill="url(#star)"/>
+    <path d="M0 -150 L18 -18 L150 0 L18 18 L0 150 L-18 18 L-150 0 L-18 -18 Z" fill="#fff8e0" opacity="0.95"/>
+    <path d="M0 -60 L7 -7 L60 0 L7 7 L0 60 L-7 7 L-60 0 L-7 -7 Z" fill="#ffffff" transform="rotate(45)" opacity="0.6"/>
+  </g>
+</svg>

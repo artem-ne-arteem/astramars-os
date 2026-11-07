@@ -1,0 +1,16 @@
+# Программы, которые ставятся с Flathub при первом запуске системы.
+# Одна строка — один ID приложения. Строки с # игнорируются.
+
+# Интернет
+org.mozilla.firefox
+org.telegram.desktop
+
+# Работа
+org.libreoffice.LibreOffice
+
+# Мультимедиа
+org.videolan.VLC
+
+# Удобство
+com.github.tchx84.Flatseal
+io.github.flattool.Warehouse
