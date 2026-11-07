@@ -1,0 +1,189 @@
+#!/usr/bin/bash
+# astramars-proxy — автоматическая настройка прокси для всей системы.
+#
+# В режиме auto (по умолчанию) раз в 30 секунд ищет локальный прокси
+# (Happ, v2rayN, Clash, Nekoray и т.п.) на известных портах. Если прокси найден
+# и через него открывается интернет — система начинает ходить через него:
+# службы (Flatpak, обновления системы), рабочий стол KDE, браузер, терминал.
+# Если прокси пропал — настройки убираются, и интернет идёт напрямую.
+#
+#   astramars-proxy            — показать состояние
+#   astramars-proxy auto       — автоматический режим (по умолчанию)
+#   astramars-proxy on ПОРТ    — всегда использовать прокси 127.0.0.1:ПОРТ
+#   astramars-proxy off        — никогда не использовать прокси
+set -euo pipefail
+
+CONF=/etc/astramars/proxy.conf
+SVC_DROPIN=/etc/systemd/system/service.d/50-astramars-proxy.conf
+ENV_FILE=/etc/environment.d/50-astramars-proxy.conf
+KDE_FILE=/etc/xdg/kioslaverc
+MARK="# managed by astramars-proxy"
+TEST_URL="https://ghcr.io/v2/"
+NO_PROXY_LIST="localhost,127.0.0.1,::1"
+
+MODE=auto
+PORT=""
+CANDIDATE_PORTS="10809 10808 2080 2081 7890 7897 1080 8080 20171 20172 8888"
+if [ -r "$CONF" ]; then . "$CONF"; fi
+
+cmd="${1:-status}"
+if [ "$cmd" != "status" ] && [ "$cmd" != "help" ] && [ "$(id -u)" -ne 0 ]; then
+    exec sudo "$0" "$@"
+fi
+
+log() { echo "astramars-proxy: $*"; }
+
+port_open() {
+    timeout 1 bash -c "</dev/tcp/127.0.0.1/$1" 2>/dev/null
+}
+
+# Работает ли порт как HTTP-прокси с выходом в интернет
+proxy_works() {
+    local code
+    code="$(curl -s -o /dev/null --max-time 8 -x "http://127.0.0.1:$1" -w '%{http_code}' "$TEST_URL" 2>/dev/null || true)"
+    [[ "$code" =~ ^[1-5][0-9][0-9]$ ]]
+}
+
+current_port() {
+    if [ -f "$ENV_FILE" ]; then
+        sed -n 's|^http_proxy=http://127\.0\.0\.1:\([0-9]*\).*|\1|p' "$ENV_FILE"
+    fi
+}
+
+find_port() {
+    local p
+    for p in $CANDIDATE_PORTS; do
+        if port_open "$p" && proxy_works "$p"; then
+            echo "$p"
+            return 0
+        fi
+    done
+    return 1
+}
+
+enable_proxy() {
+    local port="$1" url="http://127.0.0.1:$1"
+    if [ "$(current_port)" = "$port" ]; then
+        return 0
+    fi
+    mkdir -p "$(dirname "$SVC_DROPIN")" "$(dirname "$ENV_FILE")" "$(dirname "$KDE_FILE")"
+
+    # Все системные службы: Flatpak, обновления bootc, установка программ
+    cat > "$SVC_DROPIN" <<EOF
+$MARK
+[Service]
+Environment="http_proxy=$url" "https_proxy=$url" "HTTP_PROXY=$url" "HTTPS_PROXY=$url" "no_proxy=$NO_PROXY_LIST" "NO_PROXY=$NO_PROXY_LIST"
+EOF
+
+    # Сеанс пользователя: программы, запущенные с рабочего стола
+    cat > "$ENV_FILE" <<EOF
+$MARK
+http_proxy=$url
+https_proxy=$url
+HTTP_PROXY=$url
+HTTPS_PROXY=$url
+no_proxy=$NO_PROXY_LIST
+NO_PROXY=$NO_PROXY_LIST
+EOF
+
+    # Системный прокси KDE (его же видят браузеры через «системные настройки прокси»)
+    cat > "$KDE_FILE" <<EOF
+$MARK
+[Proxy Settings]
+ProxyType=1
+httpProxy=http://127.0.0.1 $port
+httpsProxy=http://127.0.0.1 $port
+NoProxyFor=$NO_PROXY_LIST
+EOF
+
+    systemctl daemon-reload
+    log "прокси включён: $url"
+}
+
+disable_proxy() {
+    local changed=0
+    if [ -f "$SVC_DROPIN" ]; then rm -f "$SVC_DROPIN"; changed=1; fi
+    if [ -f "$ENV_FILE" ]; then rm -f "$ENV_FILE"; changed=1; fi
+    if [ -f "$KDE_FILE" ] && grep -q "$MARK" "$KDE_FILE"; then rm -f "$KDE_FILE"; fi
+    if [ "$changed" = 1 ]; then
+        systemctl daemon-reload
+        log "прокси выключен, интернет идёт напрямую"
+    fi
+}
+
+apply() {
+    case "$MODE" in
+        off)
+            disable_proxy
+            ;;
+        on)
+            enable_proxy "$PORT"
+            ;;
+        auto|*)
+            local cur p
+            cur="$(current_port)"
+            if [ -n "$cur" ] && port_open "$cur"; then
+                return 0
+            fi
+            if p="$(find_port)"; then
+                enable_proxy "$p"
+            else
+                disable_proxy
+            fi
+            ;;
+    esac
+}
+
+set_mode() {
+    MODE="$1"
+    PORT="${2:-}"
+    mkdir -p "$(dirname "$CONF")"
+    cat > "$CONF" <<EOF
+# Режим прокси AstraMars OS: auto | on | off
+# Меняйте командой astramars-proxy, а не вручную.
+MODE=$MODE
+PORT=$PORT
+# Порты, на которых режим auto ищет прокси (по порядку)
+CANDIDATE_PORTS="$CANDIDATE_PORTS"
+EOF
+}
+
+status() {
+    local cur
+    cur="$(current_port)"
+    echo "Режим:   $MODE"
+    if [ -n "$cur" ]; then
+        echo "Прокси:  включён, http://127.0.0.1:$cur"
+        if port_open "$cur"; then
+            echo "Порт:    отвечает"
+        else
+            echo "Порт:    не отвечает (прокси-программа выключена?)"
+        fi
+    else
+        echo "Прокси:  выключен, интернет напрямую"
+    fi
+    if [ "$MODE" = "auto" ]; then
+        echo "Ищу на портах: $CANDIDATE_PORTS"
+    fi
+    echo
+    echo "Браузер и программы рабочего стола подхватывают изменения после выхода и входа в систему."
+}
+
+usage() {
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+case "$cmd" in
+    status)     status ;;
+    apply)      apply ;;
+    auto)       set_mode auto; apply; status ;;
+    on)
+        if ! [[ "${2:-}" =~ ^[0-9]+$ ]]; then
+            echo "Укажите HTTP-порт прокси, например: astramars-proxy on 10809" >&2
+            exit 1
+        fi
+        set_mode on "$2"; apply; status ;;
+    off)        set_mode off; apply; status ;;
+    help|-h|--help) usage ;;
+    *)          usage; exit 1 ;;
+esac

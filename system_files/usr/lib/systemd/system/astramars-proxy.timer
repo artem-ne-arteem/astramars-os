@@ -1,0 +1,10 @@
+[Unit]
+Description=AstraMars OS: проверка прокси каждые 30 секунд
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=30s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

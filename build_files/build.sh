@@ -30,5 +30,11 @@ cp /usr/share/astramars/lnf/defaults      "$LNF_DST/contents/defaults"
 chmod +x /usr/libexec/astramars-flatpak-setup
 systemctl enable astramars-flatpak-setup.service
 
+# Автонастройка прокси (Happ и т.п.)
+chmod +x /usr/bin/astramars-proxy
+chmod 0440 /etc/sudoers.d/astramars-proxy
+visudo -cf /etc/sudoers.d/astramars-proxy
+systemctl enable astramars-proxy.timer
+
 ### 5. Уборка ##################################################################
 dnf5 clean all
