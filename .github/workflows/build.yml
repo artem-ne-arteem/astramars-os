@@ -24,7 +24,7 @@ jobs:
       packages: write
     steps:
       - name: Получить код
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Подготовить имена
         id: meta
@@ -34,7 +34,7 @@ jobs:
 
       - name: Собрать образ
         id: build
-        uses: redhat-actions/buildah-build@v2
+        uses: redhat-actions/buildah-build@v3
         with:
           containerfiles: ./Containerfile
           image: ${{ env.IMAGE_NAME }}
@@ -43,7 +43,7 @@ jobs:
 
       - name: Опубликовать в GitHub Container Registry
         if: github.event_name != 'pull_request'
-        uses: redhat-actions/push-to-registry@v2
+        uses: redhat-actions/push-to-registry@v3
         with:
           image: ${{ steps.build.outputs.image }}
           tags: ${{ steps.build.outputs.tags }}

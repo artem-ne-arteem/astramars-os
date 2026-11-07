@@ -4,7 +4,8 @@
 # плюс мультимедиа-кодеки и полезные мелочи для дома.
 
 ARG BASE_IMAGE=ghcr.io/ublue-os/kinoite-main
-ARG FEDORA_VERSION=latest
+# Версия Fedora. При выходе новой — поменять число здесь.
+ARG FEDORA_VERSION=45
 
 # Отдельный слой со скриптами сборки (в итоговый образ не попадает)
 FROM scratch AS ctx
