@@ -17,14 +17,6 @@ dnf5 install -y \
     python3-qrcode \
     qt6-qtsvg
 
-# Диагностика: какой экран входа в основе образа
-rpm -q sddm plasma-login-manager || true
-readlink -f /etc/systemd/system/display-manager.service || true
-ls /usr/share/sddm/themes /usr/share/plasma-login-manager 2>&1 || true
-ls /usr/lib/systemd/system | grep -i -E "sddm|login-manager|plasmalogin" || true
-cat /etc/sddm.conf.d/* /usr/lib/sddm/sddm.conf.d/* 2>/dev/null | grep -v "^#" | grep -v "^$" | head -40 || true
-ls /usr/share/plasma/look-and-feel/org.kde.breezedark.desktop/contents/ || true
-
 ### 2. Брендинг ##############################################################
 bash "$CTX/branding.sh"
 
@@ -47,6 +39,9 @@ chmod +x /usr/bin/astramars-proxy
 chmod 0440 /etc/sudoers.d/astramars-proxy
 visudo -cf /etc/sudoers.d/astramars-proxy
 systemctl enable astramars-proxy.timer
+
+### 4б. Экран входа и блокировки ###################################################
+bash "$CTX/login-theme.sh"
 
 ### 5. AstraMars VPN ##########################################################
 SINGBOX_VERSION=1.14.4

@@ -48,6 +48,21 @@
 Actions → «Сборка установочного ISO» → **Run workflow**. Когда закончится,
 скачайте ISO внизу страницы запуска и запишите на флешку (Fedora Media Writer или Rufus).
 
+## Экран входа и блокировки
+
+<img src="docs/logo.png" width="160" align="right" alt="AstraMars OS">
+
+Точечный стиль в духе матричных дисплеев и «стекло» как в iOS:
+- обои из логотипа — точечные «AM» и чёрные дюны (`/usr/share/wallpapers/AstraMarsDots`);
+- сверху дата с красной точкой, под ней крупное время круглыми точками (шрифт [Doto](https://fonts.google.com/specimen/Doto), OFL);
+- поле пароля на полупрозрачной «стеклянной» подложке, круглые стеклянные кнопки сна, перезагрузки и выключения.
+
+Экран входа — Plasma Login Manager. Он берёт часы, подложку и кнопки из QML-модуля
+`org.kde.breeze.components`; наша копия модуля лежит в `/usr/share/astramars/login-theme/qml`
+и подключается через `QML2_IMPORT_PATH`, системные файлы не меняются. Копия сделана для Plasma 6.8:
+на другой версии сборка её не включает, и экран входа остаётся стандартным. При сборке модуль
+загружается тестом (`build_files/login-theme.sh`), с ошибками образ не соберётся.
+
 ## Ygolek VPN
 
 <img src="docs/ygolek-vpn.png" width="320" align="right" alt="Ygolek VPN">
