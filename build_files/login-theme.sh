@@ -29,25 +29,36 @@ fc-cache -f /usr/share/fonts/doto
 fc-list | grep -i doto
 
 ### Подмена компонентов Breeze
-PLASMA_VERSION="$(rpm -q --qf '%{VERSION}' plasma-workspace)"
-if [[ "$PLASMA_VERSION" != ${TESTED_PLASMA}* ]] || [ ! -f "$SYS/qmldir" ]; then
-    echo "ВНИМАНИЕ: Plasma $PLASMA_VERSION не проверена с темой входа AstraMars — экран входа будет стандартным"
+disable_theme() {
+    echo "ВНИМАНИЕ: $1 — экран входа остаётся стандартным"
     rm -f "${ENV_FILES[@]}"
+    rm -rf "$OVL_ROOT"
     exit 0
-fi
+}
+
+PLASMA_VERSION="$(rpm -q --qf '%{VERSION}' plasma-workspace)"
+[[ "$PLASMA_VERSION" == ${TESTED_PLASMA}* ]] || disable_theme "Plasma $PLASMA_VERSION не проверена с темой входа AstraMars"
+[ -f "$SYS/qmldir" ] || disable_theme "нет модуля $SYS"
+
+# Наши правки сделаны поверх конкретных версий файлов. Если KDE их поменял —
+# не подменяем, чтобы не потерять их исправления.
+(cd "$SYS" && sha256sum -c /usr/share/astramars/login-theme/upstream-6.8.2.sha256) \
+    || disable_theme "системные компоненты Breeze отличаются от тех, на которых сделана тема"
 
 ls -la "$SYS"
 cat "$SYS/qmldir"
 
 mkdir -p "$OVL"
-cp -a "$SRC/." "$OVL/"
-# Плагин, описание типов и шейдеры — системные (ссылки), QML — наши
+# Системный модуль целиком: неизменённые QML — копии, плагин и описание типов — ссылки
 for f in "$SYS"/*; do
     case "$(basename "$f")" in
-        qmldir|*.qml|animation) ;;
+        qmldir) ;;
+        *.qml) cp -a "$f" "$OVL/" ;;
         *) ln -sf "$f" "$OVL/" ;;
     esac
 done
+# Поверх — наши часы, подложка пароля и кнопки
+cp -a "$SRC/." "$OVL/"
 # Без строки prefer движок берёт QML-файлы с диска (наши), а не вшитые в плагин
 grep -v '^prefer ' "$SYS/qmldir" > "$OVL/qmldir"
 cat "$OVL/qmldir"
