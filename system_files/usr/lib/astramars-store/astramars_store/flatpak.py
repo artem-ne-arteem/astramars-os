@@ -93,7 +93,10 @@ class Flatpak:
             ok, last = self._stream(["install", "-y", scope, "flathub", app_id], on_progress)
             if ok:
                 return
-            if "нет прав" not in _explain(last):
+            # Нет связи или места — пользовательская установка не поможет. Остальное
+            # (нет прав, Flathub не подключён к системе) — пробуем поставить только для себя.
+            reason = _explain(last)
+            if reason.startswith("нет связи") or reason.startswith("не хватает места"):
                 break
         raise FlatpakError(_explain(last))
 
