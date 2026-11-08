@@ -1,0 +1,26 @@
+[Unit]
+Description=AstraMars VPN (%i)
+Documentation=https://github.com/artem-ne-arteem/astramars-os
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Конфигурацию пишет клиент AstraMars VPN от имени пользователя %i
+ExecStart=/usr/libexec/astramars-vpn/sing-box run -c /home/%i/.config/astramars-vpn/singbox.json -D /var/lib/astramars-vpn/%i
+StateDirectory=astramars-vpn/%i
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=infinity
+
+# Ядру нужна только сеть: всё остальное запрещено
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_NET_RAW CAP_DAC_READ_SEARCH
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=no
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes

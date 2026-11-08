@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- AstraMars VPN: планета с ушками на тёмном фоне, вокруг орбита со звездой -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#231a3a"/>
+      <stop offset="1" stop-color="#0c0b14"/>
+    </linearGradient>
+    <radialGradient id="planet" cx="38%" cy="34%" r="75%">
+      <stop offset="0" stop-color="#ffb07a"/>
+      <stop offset="0.45" stop-color="#ff7a45"/>
+      <stop offset="1" stop-color="#9a2e10"/>
+    </radialGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
+  <ellipse cx="128" cy="140" rx="100" ry="36" fill="none" stroke="#ffd97a" stroke-width="5" opacity="0.55" transform="rotate(-18 128 140)"/>
+  <path d="M78 116 L84 62 L116 92 Z" fill="#ff8a50"/>
+  <path d="M178 116 L172 62 L140 92 Z" fill="#ff8a50"/>
+  <circle cx="128" cy="140" r="58" fill="url(#planet)"/>
+  <path d="M128 112 v26" stroke="#fff4e8" stroke-width="9" stroke-linecap="round"/>
+  <path d="M110 124 a26 26 0 1 0 36 0" fill="none" stroke="#fff4e8" stroke-width="9" stroke-linecap="round"/>
+  <path d="M206 58 L211 76 L229 81 L211 86 L206 104 L201 86 L183 81 L201 76 Z" fill="#ffd97a"/>
+</svg>
