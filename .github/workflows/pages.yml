@@ -1,0 +1,41 @@
+name: Сайт на GitHub Pages
+
+# Публикует папку site/ по адресу https://artem-ne-arteem.github.io/astramars-os/
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v5
+
+      - name: Настроить Pages
+        uses: actions/configure-pages@v5
+
+      - name: Упаковать сайт
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Опубликовать
+        id: deployment
+        uses: actions/deploy-pages@v4
