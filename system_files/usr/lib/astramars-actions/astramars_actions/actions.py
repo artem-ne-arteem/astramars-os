@@ -114,8 +114,9 @@ BUILTIN = [
                     "| awk '{printf \"Диск: %s, занято %s (%s), свободно %s\\n\", $1, $2, $4, $3}'",
              "show": True},
             {"title": "Самые большие папки",
-             "run": "du -sh \"$HOME\"/* \"$HOME/.cache\" \"$HOME/.local/share/flatpak\" /var/lib/flatpak "
-                    "2>/dev/null | sort -rh | head -8",
+             # Недоступные папки (нет прав) не должны превращать шаг в ошибку
+             "run": "shopt -s nullglob; { du -sh \"$HOME\"/* \"$HOME/.cache\" \"$HOME/.local/share/flatpak\" "
+                    "/var/lib/flatpak 2>/dev/null || true; } | sort -rh | head -8",
              "show": True, "optional": True},
         ],
     },
