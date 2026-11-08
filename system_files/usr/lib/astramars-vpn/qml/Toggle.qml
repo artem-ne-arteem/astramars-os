@@ -12,7 +12,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color: t.checked ? Theme.mars : Theme.line
+        color: t.checked ? Theme.accent : Theme.line
         Behavior on color { ColorAnimation { duration: 180 } }
     }
     Rectangle {

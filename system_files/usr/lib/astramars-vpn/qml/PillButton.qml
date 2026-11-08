@@ -10,7 +10,7 @@ Rectangle {
     implicitHeight: 42
     implicitWidth: label.implicitWidth + 40
     radius: height / 2
-    color: primary ? (mouse.containsMouse ? Theme.marsLight : Theme.mars)
+    color: primary ? (mouse.containsMouse ? Theme.accentLight : Theme.accent)
                    : (mouse.containsMouse ? Theme.line : Theme.surface2)
     scale: mouse.pressed ? 0.97 : 1
     Behavior on color { ColorAnimation { duration: 120 } }
@@ -22,7 +22,7 @@ Rectangle {
         text: p.text
         font.pixelSize: 14
         font.weight: Font.DemiBold
-        color: p.primary ? Theme.inkOnMars : Theme.fg
+        color: p.primary ? Theme.inkOnAccent : Theme.fg
     }
 
     MouseArea {

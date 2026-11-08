@@ -48,12 +48,16 @@
 Actions → «Сборка установочного ISO» → **Run workflow**. Когда закончится,
 скачайте ISO внизу страницы запуска и запишите на флешку (Fedora Media Writer или Rufus).
 
-## AstraMars VPN
+## Ygolek VPN
 
-<img src="docs/astramars-vpn.png" width="320" align="right" alt="AstraMars VPN">
+<img src="docs/ygolek-vpn.png" width="320" align="right" alt="Ygolek VPN">
 
-Встроенный VPN-клиент на ядре [sing-box](https://github.com/SagerNet/sing-box) 1.14.4.
-Ищите в меню «AstraMars VPN» или запустите `astramars-vpn`.
+Встроенный VPN-клиент сервиса [Ygolek VPN](https://ygolek-vpn.online) на ядре
+[sing-box](https://github.com/SagerNet/sing-box) 1.14.4 (раньше назывался AstraMars VPN).
+Ищите в меню «Ygolek VPN» или запустите `ygolek-vpn`.
+
+- **Аккаунт Ygolek:** «Войти» → QR-код или кнопка «Открыть Telegram» → «✅ Войти» в боте.
+  Подписка добавляется сама, видно срок и лимит устройств, «Продлить» ведёт в бота.
 
 - **Протоколы:** VLESS (Reality, Vision, WS, gRPC, HTTPUpgrade), VMess, Trojan,
   Shadowsocks (включая 2022 и obfs), Hysteria2 (с прыжками по портам), TUIC, AnyTLS, SOCKS5.
@@ -70,7 +74,7 @@ Actions → «Сборка установочного ISO» → **Run workflow**
 и зашифрованные подписки Happ.
 
 Сборка образа проверяет клиент: `build_files/vpn_selftest.py` разбирает ссылки всех протоколов
-и прогоняет каждую конфигурацию через `sing-box check`, а `astramars-vpn --check` загружает интерфейс.
+и прогоняет каждую конфигурацию через `sing-box check`, а `ygolek-vpn --check` загружает интерфейс.
 
 ## Прокси (Happ и другие)
 

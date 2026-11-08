@@ -1,5 +1,5 @@
 singleton Theme 1.0 Theme.qml
-ConnectOrb 1.0 ConnectOrb.qml
+CoalButton 1.0 CoalButton.qml
 ModeSwitch 1.0 ModeSwitch.qml
 ServerRow 1.0 ServerRow.qml
 IconButton 1.0 IconButton.qml

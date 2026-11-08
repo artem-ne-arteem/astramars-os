@@ -14,10 +14,14 @@ from concurrent.futures import ThreadPoolExecutor
 from PySide6.QtCore import Property, QObject, QTimer, Signal, Slot
 from PySide6.QtGui import QGuiApplication
 
-from . import __version__, SINGBOX_VERSION, links, service, singbox, store
+import datetime as dt
+
+from . import __version__, SINGBOX_VERSION, account, links, service, singbox, store
 
 PING_UNKNOWN, PING_UDP, PING_FAIL = -1, -2, -3
-AUTOSTART_PATH = os.path.expanduser("~/.config/autostart/astramars-vpn.desktop")
+AUTOSTART_PATH = os.path.expanduser("~/.config/autostart/ygolek-vpn.desktop")
+OLD_AUTOSTART_PATH = os.path.expanduser("~/.config/autostart/astramars-vpn.desktop")
+ACCOUNT_SUB = "ygolek"  # подписка из аккаунта Ygolek
 
 
 def _port_open(port: int) -> bool:
@@ -54,7 +58,7 @@ def _fmt_bytes(n: float) -> str:
 # Панели (Remnawave, Marzban, 3x-ui и др.) выбирают формат подписки по User-Agent.
 # Сначала просим обычный список ссылок, затем формат ядра sing-box, затем Clash/Mihomo.
 SUBSCRIPTION_AGENTS = (
-    f"AstraMarsVPN/{__version__}",
+    f"YgolekVPN/{__version__}",
     f"sing-box/{SINGBOX_VERSION}",
     "clash.meta",
 )
@@ -157,6 +161,12 @@ class Backend(QObject):
     _subsDone = Signal(object)
     _activeChecked = Signal(bool)
     _trafficRead = Signal(float, float)
+    _loginStarted = Signal(object)
+    _loginPolled = Signal(object)
+    _accountLoaded = Signal(object)
+
+    accountChanged = Signal()
+    loginChanged = Signal()
 
     def __init__(self, svc=None):
         super().__init__()
@@ -181,6 +191,23 @@ class Backend(QObject):
         self._traffic_timer = QTimer(self, interval=1000, timeout=self._poll_traffic)
         self._status_timer.start()
         self._traffic_timer.start()
+
+        # Вход в аккаунт Ygolek
+        self._login = {"state": "idle"}
+        self._login_secret = ""
+        self._login_code = ""
+        self._login_deadline = 0.0
+        self._loginStarted.connect(self._on_login_started)
+        self._loginPolled.connect(self._on_login_polled)
+        self._accountLoaded.connect(self._on_account_loaded)
+        self._login_timer = QTimer(self, interval=2000, timeout=self._poll_login)
+        self._account_timer = QTimer(self, interval=30 * 60 * 1000, timeout=self.refreshAccount)
+        self._account_timer.start()
+
+        # Автозапуск под старым именем → под новым
+        if os.path.exists(OLD_AUTOSTART_PATH):
+            os.remove(OLD_AUTOSTART_PATH)
+            self.setAutostart(True)
 
         if self._svc.is_active():
             self._status, self._since = "on", self._svc.active_since()
@@ -253,7 +280,36 @@ class Backend(QObject):
 
     @Property(str, constant=True)
     def version(self):
-        return f"AstraMars VPN {__version__} · ядро sing-box {SINGBOX_VERSION}"
+        return f"Ygolek VPN {__version__} · ядро sing-box {SINGBOX_VERSION}"
+
+    @Property("QVariantMap", notify=accountChanged)
+    def account(self):
+        acc = self._data.get("account") or {}
+        if not acc.get("token"):
+            return {"loggedIn": False}
+        expires, days_left = "", 0
+        if acc.get("expires"):
+            try:
+                when = dt.datetime.fromisoformat(acc["expires"].replace("Z", "+00:00"))
+                if when.tzinfo is None:
+                    when = when.replace(tzinfo=dt.timezone.utc)
+                expires = when.astimezone().strftime("%d.%m.%Y")
+                days_left = max(0, (when - dt.datetime.now(dt.timezone.utc)).days)
+            except ValueError:
+                pass
+        return {
+            "loggedIn": True,
+            "username": acc.get("username") or "",
+            "active": bool(acc.get("active")),
+            "expires": expires,
+            "daysLeft": days_left,
+            "deviceLimit": acc.get("device_limit") or 0,
+            "renewUrl": acc.get("renew_url") or "",
+        }
+
+    @Property("QVariantMap", notify=loginChanged)
+    def login(self):
+        return dict(self._login)
 
     @Property("QVariantList", notify=subscriptionsChanged)
     def subscriptions(self):
@@ -277,6 +333,7 @@ class Backend(QObject):
                 "details": " · ".join(parts) or f"серверов: {count}",
                 "usage": (used / total) if total else -1,
                 "count": count,
+                "account": bool(sub.get("account")),
             })
         return result
 
@@ -393,6 +450,12 @@ class Backend(QObject):
 
     @Slot(str)
     def removeSubscription(self, sub_id):
+        if sub_id == ACCOUNT_SUB:
+            self.logout()
+            return
+        self._drop_subscription(sub_id)
+
+    def _drop_subscription(self, sub_id):
         self._data["subscriptions"] = [s for s in self._data["subscriptions"] if s["id"] != sub_id]
         self._data["servers"] = [s for s in self._data["servers"] if s.get("sub") != sub_id]
         if not self._server(self._data["selected"]):
@@ -440,23 +503,172 @@ class Backend(QObject):
         if value:
             os.makedirs(os.path.dirname(AUTOSTART_PATH), exist_ok=True)
             with open(AUTOSTART_PATH, "w", encoding="utf-8") as f:
-                f.write("[Desktop Entry]\nType=Application\nName=AstraMars VPN\n"
-                        "Exec=astramars-vpn --minimized\nIcon=astramars-vpn\nX-GNOME-Autostart-enabled=true\n")
+                f.write("[Desktop Entry]\nType=Application\nName=Ygolek VPN\n"
+                        "Exec=ygolek-vpn --minimized\nIcon=ygolek-vpn\nX-GNOME-Autostart-enabled=true\n")
         elif os.path.exists(AUTOSTART_PATH):
             os.remove(AUTOSTART_PATH)
         self.settingsChanged.emit()
+
+    # --- аккаунт Ygolek -------------------------------------------------------------
+
+    @Slot()
+    def startLogin(self):
+        if self._login.get("state") in ("starting", "waiting"):
+            return
+        self._set_login(state="starting")
+
+        def work():
+            try:
+                self._loginStarted.emit(account.start_login())
+            except account.AccountError as e:
+                self._loginStarted.emit({"error": str(e)})
+        self._pool.submit(work)
+
+    @Slot()
+    def cancelLogin(self):
+        self._login_timer.stop()
+        self._login_secret = self._login_code = ""
+        self._set_login(state="idle")
+
+    @Slot()
+    def logout(self):
+        token = (self._data.get("account") or {}).get("token")
+        if token:
+            self._pool.submit(account.logout, token)
+        self._data.pop("account", None)
+        self._drop_subscription(ACCOUNT_SUB)
+        self.accountChanged.emit()
+        self.toast.emit("Вы вышли из аккаунта Ygolek")
+
+    @Slot()
+    def refreshAccount(self):
+        token = (self._data.get("account") or {}).get("token")
+        if not token:
+            return
+
+        def work():
+            try:
+                self._accountLoaded.emit({"data": account.me(token)})
+            except account.Unauthorized:
+                self._accountLoaded.emit({"unauthorized": True})
+            except account.AccountError as e:
+                self._accountLoaded.emit({"error": str(e)})
+        self._pool.submit(work)
+
+    def _set_login(self, **values):
+        self._login = values
+        self.loginChanged.emit()
+
+    def _on_login_started(self, result):
+        if result.get("error"):
+            self._set_login(state="error", error=result["error"])
+            return
+        self._login_code, self._login_secret = result["code"], result["secret"]
+        self._login_deadline = time.time() + min(int(result.get("expiresIn") or 600), account.LOGIN_TIMEOUT)
+        qr_dir = os.path.join(store.config_dir(), "qr")
+        qr = ""
+        try:
+            for old in os.listdir(qr_dir) if os.path.isdir(qr_dir) else []:
+                os.remove(os.path.join(qr_dir, old))
+            qr_path = os.path.join(qr_dir, f"login-{self._login_code[:8]}.svg")
+            if account.make_qr(result["botUrl"], qr_path):
+                qr = "file:///" + qr_path.replace("\\", "/").lstrip("/")
+        except OSError:
+            pass
+        self._set_login(state="waiting", url=result["botUrl"], qr=qr)
+        self._login_timer.start()
+
+    def _poll_login(self):
+        if not self._login_secret:
+            self._login_timer.stop()
+            return
+        if time.time() > self._login_deadline:
+            self._login_timer.stop()
+            self._set_login(state="error", error="Время ожидания вышло. Попробуйте ещё раз")
+            return
+        code, secret = self._login_code, self._login_secret
+
+        def work():
+            try:
+                self._loginPolled.emit(dict(account.poll_login(code, secret), _code=code))
+            except account.AccountError:
+                pass  # временный сбой связи — спросим ещё раз через 2 секунды
+        self._pool.submit(work)
+
+    def _on_login_polled(self, result):
+        if result.get("_code") != self._login_code or self._login.get("state") != "waiting":
+            return
+        status = result.get("status")
+        if status == "pending":
+            return
+        self._login_timer.stop()
+        self._login_secret = self._login_code = ""
+        if status == "ok" and result.get("token"):
+            self._data["account"] = {"token": result["token"]}
+            self._save()
+            self._set_login(state="done")
+            self.accountChanged.emit()
+            self.toast.emit("Вы вошли в аккаунт Ygolek")
+            self.refreshAccount()
+        elif status == "denied":
+            self._set_login(state="error", error="Вход отменён в боте")
+        else:
+            self._set_login(state="error", error="Ссылка для входа устарела. Попробуйте ещё раз")
+
+    def _on_account_loaded(self, result):
+        acc = self._data.get("account")
+        if not acc:
+            return
+        if result.get("unauthorized"):
+            self._data.pop("account", None)
+            self._drop_subscription(ACCOUNT_SUB)
+            self.accountChanged.emit()
+            self.toast.emit("Вход в аккаунт Ygolek больше не действует — войдите снова")
+            return
+        if result.get("error"):
+            if self._data["subscriptions"]:
+                self.updateSubscriptions()
+            return
+        data = result["data"]
+        sub = data.get("subscription") or {}
+        acc.update(
+            username=data.get("username") or "",
+            active=bool(sub),
+            expires=sub.get("expiresAt") or "",
+            device_limit=data.get("deviceLimit") or 0,
+            renew_url=data.get("renewUrl") or "",
+        )
+        key = data.get("key")
+        existing = next((s for s in self._data["subscriptions"] if s["id"] == ACCOUNT_SUB), None)
+        if key:
+            if existing is None:
+                self._data["subscriptions"].insert(0, {"id": ACCOUNT_SUB, "url": key, "title": "Ygolek VPN", "account": True})
+            else:
+                existing.update(url=key, title="Ygolek VPN", account=True)
+        elif existing is not None:
+            self._drop_subscription(ACCOUNT_SUB)
+            self.toast.emit("Подписка Ygolek не активна — продлите её в боте")
+        self._save()
+        self.accountChanged.emit()
+        self.subscriptionsChanged.emit()
+        if self._data["subscriptions"]:
+            self.updateSubscriptions()
 
     def start(self):
         """Вызывается после загрузки интерфейса."""
         self.pingAll()
         if self._data["autoconnect"] and self._status == "off" and self._data["selected"]:
             self.connect_()
-        if self._data["subscriptions"]:
+        if (self._data.get("account") or {}).get("token"):
+            self.refreshAccount()  # сам обновит подписки
+        elif self._data["subscriptions"]:
             self.updateSubscriptions()
 
     def shutdown(self):
         self._status_timer.stop()
         self._traffic_timer.stop()
+        self._login_timer.stop()
+        self._account_timer.stop()
         self._pool.shutdown(wait=False, cancel_futures=True)
 
     # --- внутреннее ------------------------------------------------------------------

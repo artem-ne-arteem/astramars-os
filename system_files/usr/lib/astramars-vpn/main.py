@@ -1,4 +1,4 @@
-"""AstraMars VPN — точка входа."""
+"""Ygolek VPN — точка входа."""
 
 import os
 import signal
@@ -16,11 +16,11 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon  # noqa: E402
 from astramars_vpn.backend import Backend  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SOCKET_NAME = f"astramars-vpn-{os.environ.get('USER') or os.environ.get('USERNAME') or 'user'}"
+SOCKET_NAME = f"ygolek-vpn-{os.environ.get('USER') or os.environ.get('USERNAME') or 'user'}"
 
 
 def app_icon() -> QIcon:
-    icon = QIcon.fromTheme("astramars-vpn")
+    icon = QIcon.fromTheme("ygolek-vpn")
     if icon.isNull():
         icon = QIcon(os.path.join(HERE, "qml", "assets", "icon.svg"))
     return icon
@@ -35,9 +35,9 @@ def main():
 
     QQuickStyle.setStyle("Basic")
     app = QApplication(sys.argv)
-    app.setApplicationName("astramars-vpn")
-    app.setApplicationDisplayName("AstraMars VPN")
-    app.setDesktopFileName("astramars-vpn")
+    app.setApplicationName("ygolek-vpn")
+    app.setApplicationDisplayName("Ygolek VPN")
+    app.setDesktopFileName("ygolek-vpn")
     app.setWindowIcon(app_icon())
     app.setQuitOnLastWindowClosed(False)
     font = app.font()
@@ -95,7 +95,7 @@ def main():
     if QSystemTrayIcon.isSystemTrayAvailable():
         tray = QSystemTrayIcon(app_icon())
         menu = QMenu()
-        act_show = QAction("Открыть AstraMars VPN", menu, triggered=show_window)
+        act_show = QAction("Открыть Ygolek VPN", menu, triggered=show_window)
         act_toggle = QAction("Подключить", menu, triggered=backend.toggleConnection)
         act_quit = QAction("Выйти", menu, triggered=app.quit)
         menu.addAction(act_show)
@@ -108,7 +108,7 @@ def main():
             on = backend.status == "on"
             act_toggle.setText("Отключить" if backend.status in ("on", "connecting") else "Подключить")
             name = backend.current.get("name", "")
-            tray.setToolTip(f"AstraMars VPN — {'подключено: ' + name if on else 'отключено'}")
+            tray.setToolTip(f"Ygolek VPN — {'подключено: ' + name if on else 'отключено'}")
         backend.statusChanged.connect(update_tray)
         backend.selectedChanged.connect(update_tray)
         update_tray()

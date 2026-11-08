@@ -14,13 +14,13 @@ Rectangle {
     radius: 16
     color: selected ? Theme.surface2 : mouse.containsMouse ? Theme.surfaceHover : Theme.surface
     border.width: selected ? 1.5 : 1
-    border.color: selected ? Theme.mars : Theme.line
+    border.color: selected ? Theme.accent : Theme.line
     Behavior on color { ColorAnimation { duration: 150 } }
     Behavior on border.color { ColorAnimation { duration: 150 } }
 
     readonly property int ping: server.ping === undefined ? -1 : server.ping
     readonly property string pingText: ping >= 0 ? ping + " мс" : ping === -2 ? "UDP" : ping === -3 ? "нет связи" : "—"
-    readonly property color pingColor: ping >= 0 ? (ping < 150 ? Theme.ok : ping < 400 ? Theme.warn : Theme.mars)
+    readonly property color pingColor: ping >= 0 ? (ping < 150 ? Theme.ok : ping < 400 ? Theme.warn : Theme.danger)
                                                  : ping === -3 ? Theme.danger : Theme.faint
 
     MouseArea {
@@ -41,14 +41,14 @@ Rectangle {
             Layout.preferredWidth: 58
             Layout.preferredHeight: 26
             radius: 8
-            color: row.selected ? Qt.rgba(1, 0.48, 0.27, 0.16) : Theme.surface2
+            color: row.selected ? Qt.rgba(0.18, 0.48, 1, 0.16) : Theme.surface2
             Text {
                 anchors.centerIn: parent
                 text: row.server.protocol || ""
                 font.family: Theme.mono
                 font.pixelSize: 11
                 font.weight: Font.Medium
-                color: row.selected ? Theme.marsLight : Theme.astra
+                color: row.selected ? Theme.accentLight : Theme.glow
             }
         }
 

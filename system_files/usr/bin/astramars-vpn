@@ -1,3 +1,3 @@
 #!/usr/bin/bash
-# AstraMars VPN — запуск клиента
-exec /usr/bin/python3 /usr/lib/astramars-vpn/main.py "$@"
+# Старое имя клиента: теперь это Ygolek VPN
+exec /usr/bin/ygolek-vpn "$@"

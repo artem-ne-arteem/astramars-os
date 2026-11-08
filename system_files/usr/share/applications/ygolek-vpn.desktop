@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ygolek VPN
+GenericName=VPN-клиент
+Comment=Вход через Telegram, подписка Ygolek и любые серверы VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC
+Exec=ygolek-vpn
+Icon=ygolek-vpn
+Terminal=false
+Categories=Network;
+Keywords=vpn;ygolek;уголёк;proxy;vless;vmess;trojan;shadowsocks;hysteria;tuic;reality;прокси;впн;
+StartupWMClass=ygolek-vpn

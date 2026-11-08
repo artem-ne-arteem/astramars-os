@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+# Ygolek VPN — запуск клиента
+exec /usr/bin/python3 /usr/lib/astramars-vpn/main.py "$@"

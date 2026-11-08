@@ -25,8 +25,8 @@ Rectangle {
         radius: height / 2
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0; color: Theme.mars }
-            GradientStop { position: 1; color: Theme.marsLight }
+            GradientStop { position: 0; color: Theme.accent }
+            GradientStop { position: 1; color: Theme.accentLight }
         }
         Behavior on x { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
     }
@@ -49,14 +49,14 @@ Rectangle {
                         text: modelData.title
                         font.pixelSize: 14
                         font.weight: Font.DemiBold
-                        color: active ? Theme.inkOnMars : Theme.fg
+                        color: active ? Theme.inkOnAccent : Theme.fg
                         Behavior on color { ColorAnimation { duration: 200 } }
                     }
                     Text {
                         anchors.baseline: titleText.baseline
                         text: modelData.hint
                         font.pixelSize: 12
-                        color: active ? Qt.rgba(0.11, 0.05, 0.02, 0.7) : Theme.muted
+                        color: active ? Qt.rgba(1, 1, 1, 0.72) : Theme.muted
                         Behavior on color { ColorAnimation { duration: 200 } }
                     }
                 }

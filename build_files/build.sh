@@ -14,6 +14,7 @@ dnf5 install -y \
     jetbrains-mono-fonts-all \
     python3-pyside6 \
     python3-pyyaml \
+    python3-qrcode \
     qt6-qtsvg
 
 ### 2. Брендинг ##############################################################
@@ -57,15 +58,15 @@ curl -fsSL --retry 3 -o "$RULES/geoip-ru.srs" \
 curl -fsSL --retry 3 -o "$RULES/geosite-category-ru.srs" \
     https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ru.srs
 
-chmod +x /usr/bin/astramars-vpn
-python3 -c "import PySide6.QtQuick, PySide6.QtQuickControls2; print('PySide6', PySide6.__version__)"
+chmod +x /usr/bin/astramars-vpn /usr/bin/ygolek-vpn
+python3 -c "import PySide6.QtQuick, PySide6.QtQuickControls2, qrcode, yaml; print('PySide6', PySide6.__version__)"
 
 # Самотест: все протоколы разбираются, а каждая конфигурация проходит проверку sing-box
 python3 "$CTX/vpn_selftest.py" /usr/lib/astramars-vpn /usr/libexec/astramars-vpn/sing-box
 
 # Интерфейс загружается на Qt из Fedora без ошибок QML
 ASTRAMARS_VPN_DEV=1 ASTRAMARS_VPN_HOME=/tmp/vpn-check QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
-    python3 /usr/lib/astramars-vpn/main.py --check
+    /usr/bin/ygolek-vpn --check
 rm -rf /tmp/vpn-check
 
 ### 6. Уборка ##################################################################

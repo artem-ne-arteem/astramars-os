@@ -10,7 +10,7 @@ ApplicationWindow {
     minimumWidth: 380
     minimumHeight: 660
     visible: false
-    title: "AstraMars VPN"
+    title: "Ygolek VPN"
     color: Theme.bg
 
     property bool hideOnClose: false
@@ -27,9 +27,12 @@ ApplicationWindow {
     function openPanel(name) {
         if (name === "add") addPopup.open()
         else if (name === "settings") settingsPopup.open()
+        else if (name === "account") accountButton.clicked()
     }
 
-    // --- фон: звёзды и тёплое свечение -----------------------------------------
+    readonly property var acc: backend.account
+
+    // --- фон: синее свечение и волнистая сетка, как на сайте -----------------------
     Canvas {
         anchors.fill: parent
         onWidthChanged: requestPaint()
@@ -37,18 +40,22 @@ ApplicationWindow {
         onPaint: {
             const ctx = getContext("2d")
             ctx.reset()
-            const g = ctx.createRadialGradient(width / 2, 300, 0, width / 2, 300, width * 0.9)
-            g.addColorStop(0, "rgba(255,122,69,0.10)")
-            g.addColorStop(1, "rgba(255,122,69,0)")
+            const g = ctx.createRadialGradient(width / 2, 290, 0, width / 2, 290, width * 0.95)
+            g.addColorStop(0, "rgba(47,123,255,0.16)")
+            g.addColorStop(1, "rgba(47,123,255,0)")
             ctx.fillStyle = g
             ctx.fillRect(0, 0, width, height)
-            let seed = 11
-            const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
-            for (let i = 0; i < 80; i++) {
-                ctx.fillStyle = "rgba(255,255,255," + (0.12 + rnd() * 0.45).toFixed(2) + ")"
+            ctx.strokeStyle = "rgba(91,155,255,0.07)"
+            ctx.lineWidth = 1
+            for (let row = 0; row < 14; row++) {
                 ctx.beginPath()
-                ctx.arc(rnd() * width, rnd() * height, 0.3 + rnd() * 1.2, 0, Math.PI * 2)
-                ctx.fill()
+                const base = 40 + row * 58
+                for (let x = 0; x <= width; x += 8) {
+                    const y = base + Math.sin(x / 70 + row * 0.7) * 10
+                    if (x === 0) ctx.moveTo(x, y)
+                    else ctx.lineTo(x, y)
+                }
+                ctx.stroke()
             }
         }
     }
@@ -75,7 +82,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 spacing: 0
                 Text {
-                    text: "AstraMars VPN"
+                    text: "Ygolek VPN"
                     font.pixelSize: 17
                     font.weight: Font.Bold
                     color: Theme.fg
@@ -86,6 +93,19 @@ ApplicationWindow {
                     elide: Text.ElideRight
                     font.pixelSize: 12
                     color: Theme.muted
+                }
+            }
+            IconButton {
+                id: accountButton
+                icon: "user"
+                tip: win.acc.loggedIn ? "Аккаунт Ygolek" : "Войти в аккаунт Ygolek"
+                onClicked: win.acc.loggedIn ? accountPopup.open() : loginPopup.begin()
+                Rectangle {
+                    visible: win.acc.loggedIn
+                    width: 8; height: 8; radius: 4
+                    anchors.right: parent.right; anchors.top: parent.top
+                    anchors.margins: 5
+                    color: win.acc.active ? Theme.ok : Theme.warn
                 }
             }
             IconButton {
@@ -101,8 +121,8 @@ ApplicationWindow {
             onPicked: (m) => backend.setMode(m)
         }
 
-        // --- кнопка-планета и статус ------------------------------------------------
-        ConnectOrb {
+        // --- кнопка-уголёк и статус ------------------------------------------------
+        CoalButton {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: 2
             status: win.status
@@ -144,7 +164,7 @@ ApplicationWindow {
                     }
                     if (win.status === "error") return backend.error
                     if (win.status === "connecting") return "Запускаю ядро sing-box"
-                    return backend.servers.length ? "Нажмите на планету, чтобы подключиться" : "Добавьте сервер, чтобы начать"
+                    return backend.servers.length ? "Нажмите на уголёк, чтобы подключиться" : "Добавьте сервер, чтобы начать"
                 }
                 font.family: win.isOn ? Theme.mono : ""
                 font.pixelSize: 13
@@ -171,7 +191,7 @@ ApplicationWindow {
                 Repeater {
                     model: [
                         { arrow: "↓", value: backend.downSpeed, tint: Theme.ok },
-                        { arrow: "↑", value: backend.upSpeed, tint: Theme.astra }
+                        { arrow: "↑", value: backend.upSpeed, tint: Theme.glow }
                     ]
                     delegate: Rectangle {
                         required property var modelData
@@ -192,10 +212,87 @@ ApplicationWindow {
             }
         }
 
+        // --- аккаунт Ygolek ----------------------------------------------------------
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.topMargin: 4
+            implicitHeight: 56
+            radius: 16
+            color: accountMouse.containsMouse ? Theme.surfaceHover : Theme.surface
+            border.color: win.acc.loggedIn && !win.acc.active ? Qt.rgba(1, 0.78, 0.34, 0.4) : Theme.line
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            MouseArea {
+                id: accountMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: accountButton.clicked()
+            }
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 14
+                anchors.rightMargin: 10
+                spacing: 12
+                Rectangle {
+                    Layout.preferredWidth: 32
+                    Layout.preferredHeight: 32
+                    radius: 16
+                    color: win.acc.loggedIn ? Theme.accent : Theme.surface2
+                    Text {
+                        anchors.centerIn: parent
+                        visible: win.acc.loggedIn
+                        text: (win.acc.username || "Y").charAt(0).toUpperCase()
+                        font.pixelSize: 14
+                        font.weight: Font.Bold
+                        color: Theme.inkOnAccent
+                    }
+                    Image {
+                        anchors.centerIn: parent
+                        visible: !win.acc.loggedIn
+                        source: "assets/user.svg"
+                        sourceSize: Qt.size(36, 36)
+                        width: 18; height: 18
+                    }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    spacing: 1
+                    Text {
+                        Layout.fillWidth: true
+                        text: win.acc.loggedIn ? (win.acc.username ? "@" + win.acc.username : "Аккаунт Ygolek") : "Аккаунт Ygolek"
+                        elide: Text.ElideRight
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        color: Theme.fg
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: !win.acc.loggedIn ? "Войдите — подписка добавится сама"
+                            : win.acc.active ? "Подписка до " + win.acc.expires + " · " + win.acc.daysLeft + " дн."
+                            : "Подписка не активна"
+                        elide: Text.ElideRight
+                        font.pixelSize: 12
+                        color: win.acc.loggedIn && !win.acc.active ? Theme.warn : Theme.muted
+                    }
+                }
+                PillButton {
+                    implicitHeight: 34
+                    text: !win.acc.loggedIn ? "Войти" : (!win.acc.active || win.acc.daysLeft <= 5) ? "Продлить" : "Открыть"
+                    primary: !win.acc.loggedIn || !win.acc.active || win.acc.daysLeft <= 5
+                    onClicked: {
+                        if (!win.acc.loggedIn) loginPopup.begin()
+                        else if (!win.acc.active || win.acc.daysLeft <= 5) Qt.openUrlExternally(win.acc.renewUrl)
+                        else accountPopup.open()
+                    }
+                }
+            }
+        }
+
         // --- серверы -----------------------------------------------------------------
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 4
             spacing: 2
             Text {
                 text: "Серверы"
@@ -245,13 +342,14 @@ ApplicationWindow {
                 visible: list.count === 0
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "Здесь появятся ваши серверы"
+                    text: win.acc.loggedIn ? "Серверы появятся после продления подписки" : "Здесь появятся ваши серверы"
                     font.pixelSize: 14
                     color: Theme.muted
                 }
                 PillButton {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "Добавить сервер"
+                    primary: false
+                    text: "Добавить сервер вручную"
                     onClicked: addPopup.open()
                 }
             }
@@ -345,14 +443,14 @@ ApplicationWindow {
                     font.family: Theme.mono
                     font.pixelSize: 12
                     selectByMouse: true
-                    selectionColor: Theme.mars
+                    selectionColor: Theme.accent
                     placeholderText: "https://sub.example.com/…\nvless://…  vmess://…  trojan://…\nss://…  hy2://…  tuic://…  anytls://…"
                     placeholderTextColor: Theme.faint
                     padding: 12
                     background: Rectangle {
                         color: Theme.bg
                         radius: 14
-                        border.color: input.activeFocus ? Theme.mars : Theme.line
+                        border.color: input.activeFocus ? Theme.accent : Theme.line
                     }
                 }
             }
@@ -517,13 +615,14 @@ ApplicationWindow {
                                         width: parent.width * Math.min(1, Math.max(0, modelData.usage))
                                         height: parent.height
                                         radius: 2
-                                        color: modelData.usage > 0.9 ? Theme.danger : Theme.mars
+                                        color: modelData.usage > 0.9 ? Theme.danger : Theme.accent
                                     }
                                 }
                             }
                             IconButton {
                                 icon: "trash"
                                 tip: "Удалить подписку и её серверы"
+                                visible: !modelData.account
                                 onClicked: backend.removeSubscription(modelData.id)
                             }
                         }
@@ -537,6 +636,253 @@ ApplicationWindow {
                     horizontalAlignment: Text.AlignHCenter
                     font.pixelSize: 11
                     color: Theme.faint
+                }
+            }
+        }
+    }
+
+    // --- вход в аккаунт Ygolek ------------------------------------------------------------
+    Popup {
+        id: loginPopup
+        modal: true
+        anchors.centerIn: Overlay.overlay
+        width: win.width - 32
+        padding: 22
+        readonly property var st: backend.login
+        function begin() {
+            open()
+            backend.startLogin()
+        }
+        onClosed: if (st.state !== "done") backend.cancelLogin()
+        Connections {
+            target: backend
+            function onLoginChanged() {
+                if (backend.login.state === "done") loginPopup.close()
+            }
+        }
+        Overlay.modal: Rectangle { color: "#b0050409" }
+        background: Rectangle { color: Theme.surface; radius: 22; border.color: Theme.line }
+        enter: Transition {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 160 }
+            NumberAnimation { property: "scale"; from: 0.96; to: 1; duration: 200; easing.type: Easing.OutCubic }
+        }
+        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 120 } }
+
+        contentItem: ColumnLayout {
+            spacing: 14
+            RowLayout {
+                Layout.fillWidth: true
+                Text {
+                    Layout.fillWidth: true
+                    text: "Вход в Ygolek"
+                    font.pixelSize: 18
+                    font.weight: Font.DemiBold
+                    color: Theme.fg
+                }
+                IconButton { icon: "close"; onClicked: loginPopup.close() }
+            }
+            Text {
+                Layout.fillWidth: true
+                text: "Отсканируйте код камерой телефона или откройте Telegram на этом компьютере и нажмите «Войти» в боте."
+                wrapMode: Text.WordWrap
+                font.pixelSize: 13
+                color: Theme.muted
+            }
+
+            // QR-код
+            Rectangle {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: 212
+                Layout.preferredHeight: 212
+                radius: 18
+                color: loginPopup.st.qr ? "#ffffff" : Theme.bg
+                border.color: Theme.line
+                Image {
+                    anchors.centerIn: parent
+                    width: 188; height: 188
+                    visible: loginPopup.st.state === "waiting" && !!loginPopup.st.qr
+                    source: loginPopup.st.qr || ""
+                    sourceSize: Qt.size(376, 376)
+                    smooth: false
+                    cache: false
+                }
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 10
+                    visible: loginPopup.st.state !== "waiting" || !loginPopup.st.qr
+                    Image {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: loginPopup.st.state === "starting"
+                        source: "assets/refresh.svg"
+                        sourceSize: Qt.size(56, 56)
+                        width: 28; height: 28
+                        RotationAnimation on rotation { running: loginPopup.st.state === "starting"; loops: Animation.Infinite; from: 0; to: 360; duration: 900 }
+                    }
+                    Text {
+                        width: 170
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        text: loginPopup.st.state === "starting" ? "Готовлю ссылку для входа…"
+                            : loginPopup.st.state === "error" ? loginPopup.st.error
+                            : "Откройте ссылку кнопкой ниже"
+                        font.pixelSize: 13
+                        color: loginPopup.st.state === "error" ? Theme.danger : Theme.muted
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                visible: loginPopup.st.state === "waiting"
+                spacing: 8
+                Rectangle {
+                    width: 8; height: 8; radius: 4
+                    color: Theme.accentLight
+                    SequentialAnimation on opacity {
+                        running: loginPopup.st.state === "waiting"; loops: Animation.Infinite
+                        NumberAnimation { to: 0.2; duration: 600 }
+                        NumberAnimation { to: 1; duration: 600 }
+                    }
+                }
+                Text {
+                    text: "Жду подтверждения в боте…"
+                    font.pixelSize: 13
+                    color: Theme.muted
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                PillButton {
+                    primary: false
+                    text: "Отмена"
+                    onClicked: loginPopup.close()
+                }
+                Item { Layout.fillWidth: true }
+                PillButton {
+                    visible: loginPopup.st.state !== "error"
+                    text: "Открыть Telegram"
+                    opacity: loginPopup.st.url ? 1 : 0.5
+                    onClicked: if (loginPopup.st.url) Qt.openUrlExternally(loginPopup.st.url)
+                }
+                PillButton {
+                    visible: loginPopup.st.state === "error"
+                    text: "Ещё раз"
+                    onClicked: backend.startLogin()
+                }
+            }
+        }
+    }
+
+    // --- аккаунт Ygolek ---------------------------------------------------------------------
+    Popup {
+        id: accountPopup
+        modal: true
+        anchors.centerIn: Overlay.overlay
+        width: win.width - 32
+        padding: 22
+        Overlay.modal: Rectangle { color: "#b0050409" }
+        background: Rectangle { color: Theme.surface; radius: 22; border.color: Theme.line }
+        enter: Transition {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 160 }
+            NumberAnimation { property: "scale"; from: 0.96; to: 1; duration: 200; easing.type: Easing.OutCubic }
+        }
+        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 120 } }
+
+        contentItem: ColumnLayout {
+            spacing: 16
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 14
+                Rectangle {
+                    Layout.preferredWidth: 52
+                    Layout.preferredHeight: 52
+                    radius: 26
+                    gradient: Gradient {
+                        GradientStop { position: 0; color: Theme.accentLight }
+                        GradientStop { position: 1; color: Theme.accent }
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        text: (win.acc.username || "Y").charAt(0).toUpperCase()
+                        font.pixelSize: 22
+                        font.weight: Font.Bold
+                        color: Theme.inkOnAccent
+                    }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    spacing: 2
+                    Text {
+                        Layout.fillWidth: true
+                        text: win.acc.username ? "@" + win.acc.username : "Аккаунт Ygolek"
+                        elide: Text.ElideRight
+                        font.pixelSize: 17
+                        font.weight: Font.DemiBold
+                        color: Theme.fg
+                    }
+                    Text {
+                        text: "Вход через Telegram"
+                        font.pixelSize: 12
+                        color: Theme.muted
+                    }
+                }
+                IconButton { Layout.alignment: Qt.AlignTop; icon: "close"; onClicked: accountPopup.close() }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: infoCol.implicitHeight + 28
+                radius: 14
+                color: Theme.bg
+                border.color: Theme.line
+                ColumnLayout {
+                    id: infoCol
+                    anchors.fill: parent
+                    anchors.margins: 14
+                    spacing: 10
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: "Подписка"; font.pixelSize: 13; color: Theme.muted; Layout.fillWidth: true }
+                        Text {
+                            text: win.acc.active ? "активна" : "не активна"
+                            font.pixelSize: 13
+                            font.weight: Font.DemiBold
+                            color: win.acc.active ? Theme.ok : Theme.warn
+                        }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: !!win.acc.active
+                        Text { text: "Действует до"; font.pixelSize: 13; color: Theme.muted; Layout.fillWidth: true }
+                        Text { text: win.acc.expires + " · " + win.acc.daysLeft + " дн."; font.pixelSize: 13; color: Theme.fg }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: win.acc.deviceLimit > 0
+                        Text { text: "Устройств"; font.pixelSize: 13; color: Theme.muted; Layout.fillWidth: true }
+                        Text { text: "до " + win.acc.deviceLimit; font.pixelSize: 13; color: Theme.fg }
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                PillButton {
+                    primary: false
+                    text: "Выйти"
+                    onClicked: {
+                        backend.logout()
+                        accountPopup.close()
+                    }
+                }
+                Item { Layout.fillWidth: true }
+                PillButton {
+                    text: win.acc.active ? "Продлить в боте" : "Купить в боте"
+                    onClicked: Qt.openUrlExternally(win.acc.renewUrl)
                 }
             }
         }
