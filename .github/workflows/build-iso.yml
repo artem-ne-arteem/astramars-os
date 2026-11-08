@@ -40,7 +40,7 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type anaconda-iso \
             --rootfs btrfs \
-            --use-librepo=True \
+            --log-level debug \
             "${{ steps.image.outputs.ref }}"
           sudo mv output/bootiso/install.iso "output/AstraMars-OS-$(date -u +%Y%m%d).iso"
 
