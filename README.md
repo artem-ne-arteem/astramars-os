@@ -96,6 +96,17 @@ Actions → «Сборка установочного ISO» → **Run workflow**
 Видно текущий шаг, итог и журнал. Свои действия: название и команды по одной в строке, можно от администратора
 (через `pkexec`). Шаги, которым нужны права администратора, помечены замком.
 
+## Меню приложений
+
+<img src="docs/astramars-menu.png" width="480" alt="Меню приложений AstraMars">
+
+Стиль Plasma «AstraMars» (`/usr/share/plasma/desktoptheme/astramars`): меню и всплывающие окна — чёрное стекло
+с размытием, скругления 22 px, тонкая светлая рамка, мягкая подсветка пунктов; основа — Breeze Dark.
+SVG генерирует `build_files/make_plasma_theme.py`. Меню (Kickoff): избранное и приложения сеткой, кнопки питания
+значками, кнопка меню — точечное кольцо с красной точкой. Для каждого пользователя это один раз применяет
+`/usr/libexec/astramars-menu-setup` при входе (через `evaluateScript` Plasma); стиль меняется, только если
+пользователь не выбирал свой.
+
 ## Ygolek VPN
 
 <img src="docs/ygolek-vpn.png" width="320" align="right" alt="Ygolek VPN">

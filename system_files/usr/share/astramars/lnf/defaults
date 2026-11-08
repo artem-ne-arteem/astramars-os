@@ -9,7 +9,7 @@ Theme=breeze-dark
 widgetStyle=Breeze
 
 [plasmarc][Theme]
-name=breeze-dark
+name=astramars
 
 [kcminputrc][Mouse]
 cursorTheme=breeze_cursors

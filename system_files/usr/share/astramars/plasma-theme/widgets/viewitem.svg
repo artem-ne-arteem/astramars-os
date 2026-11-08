@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="216" viewBox="0 0 400 216">
+<g id="hover-topleft"><path d="M12,12 L0,12 A12,12 0 0 1 12,0 Z" fill="#ffffff" fill-opacity="0.07"/><rect x="0" y="0" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="hover-top"><rect x="18" y="0" width="4" height="12" fill="#ffffff" fill-opacity="0.07"/><rect x="18" y="0" width="4" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="hover-topright"><path d="M28,12 L40,12 A12,12 0 0 0 28,0 Z" fill="#ffffff" fill-opacity="0.07"/><rect x="28" y="0" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="hover-left"><rect x="0" y="18" width="12" height="4" fill="#ffffff" fill-opacity="0.07"/><rect x="0" y="18" width="12" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="hover-center"><rect x="18" y="18" width="4" height="4" fill="#ffffff" fill-opacity="0.07"/><rect x="18" y="18" width="4" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="hover-right"><rect x="28" y="18" width="12" height="4" fill="#ffffff" fill-opacity="0.07"/><rect x="28" y="18" width="12" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="hover-bottomleft"><path d="M12,28 L0,28 A12,12 0 0 0 12,40 Z" fill="#ffffff" fill-opacity="0.07"/><rect x="0" y="28" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="hover-bottom"><rect x="18" y="28" width="4" height="12" fill="#ffffff" fill-opacity="0.07"/><rect x="18" y="28" width="4" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="hover-bottomright"><path d="M28,28 L40,28 A12,12 0 0 1 28,40 Z" fill="#ffffff" fill-opacity="0.07"/><rect x="28" y="28" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<rect id="hover-hint-top-margin" x="0" y="46" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="hover-hint-bottom-margin" x="10" y="46" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="hover-hint-left-margin" x="20" y="46" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="hover-hint-right-margin" x="30" y="46" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<g id="selected-topleft"><path d="M12,84 L0,84 A12,12 0 0 1 12,72 Z" fill="#ffffff" fill-opacity="0.13"/><rect x="0" y="72" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected-top"><rect x="18" y="72" width="4" height="12" fill="#ffffff" fill-opacity="0.13"/><rect x="18" y="72" width="4" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected-topright"><path d="M28,84 L40,84 A12,12 0 0 0 28,72 Z" fill="#ffffff" fill-opacity="0.13"/><rect x="28" y="72" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected-left"><rect x="0" y="90" width="12" height="4" fill="#ffffff" fill-opacity="0.13"/><rect x="0" y="90" width="12" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="selected-center"><rect x="18" y="90" width="4" height="4" fill="#ffffff" fill-opacity="0.13"/><rect x="18" y="90" width="4" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="selected-right"><rect x="28" y="90" width="12" height="4" fill="#ffffff" fill-opacity="0.13"/><rect x="28" y="90" width="12" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="selected-bottomleft"><path d="M12,100 L0,100 A12,12 0 0 0 12,112 Z" fill="#ffffff" fill-opacity="0.13"/><rect x="0" y="100" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected-bottom"><rect x="18" y="100" width="4" height="12" fill="#ffffff" fill-opacity="0.13"/><rect x="18" y="100" width="4" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected-bottomright"><path d="M28,100 L40,100 A12,12 0 0 1 28,112 Z" fill="#ffffff" fill-opacity="0.13"/><rect x="28" y="100" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<rect id="selected-hint-top-margin" x="0" y="118" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="selected-hint-bottom-margin" x="10" y="118" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="selected-hint-left-margin" x="20" y="118" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="selected-hint-right-margin" x="30" y="118" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<g id="selected+hover-topleft"><path d="M12,156 L0,156 A12,12 0 0 1 12,144 Z" fill="#ffffff" fill-opacity="0.17"/><rect x="0" y="144" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected+hover-top"><rect x="18" y="144" width="4" height="12" fill="#ffffff" fill-opacity="0.17"/><rect x="18" y="144" width="4" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected+hover-topright"><path d="M28,156 L40,156 A12,12 0 0 0 28,144 Z" fill="#ffffff" fill-opacity="0.17"/><rect x="28" y="144" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected+hover-left"><rect x="0" y="162" width="12" height="4" fill="#ffffff" fill-opacity="0.17"/><rect x="0" y="162" width="12" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="selected+hover-center"><rect x="18" y="162" width="4" height="4" fill="#ffffff" fill-opacity="0.17"/><rect x="18" y="162" width="4" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="selected+hover-right"><rect x="28" y="162" width="12" height="4" fill="#ffffff" fill-opacity="0.17"/><rect x="28" y="162" width="12" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="selected+hover-bottomleft"><path d="M12,172 L0,172 A12,12 0 0 0 12,184 Z" fill="#ffffff" fill-opacity="0.17"/><rect x="0" y="172" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected+hover-bottom"><rect x="18" y="172" width="4" height="12" fill="#ffffff" fill-opacity="0.17"/><rect x="18" y="172" width="4" height="12" fill="#000000" fill-opacity="0"/></g>
+<g id="selected+hover-bottomright"><path d="M28,172 L40,172 A12,12 0 0 1 28,184 Z" fill="#ffffff" fill-opacity="0.17"/><rect x="28" y="172" width="12" height="12" fill="#000000" fill-opacity="0"/></g>
+<rect id="selected+hover-hint-top-margin" x="0" y="190" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="selected+hover-hint-bottom-margin" x="10" y="190" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="selected+hover-hint-left-margin" x="20" y="190" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="selected+hover-hint-right-margin" x="30" y="190" width="6" height="6" fill="#000000" fill-opacity="0"/>
+</svg>

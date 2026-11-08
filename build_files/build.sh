@@ -40,6 +40,9 @@ chmod 0440 /etc/sudoers.d/astramars-proxy
 visudo -cf /etc/sudoers.d/astramars-proxy
 systemctl enable astramars-proxy.timer
 
+### 4а. Стиль Plasma: меню и всплывающие окна ##########################################
+bash "$CTX/plasma-theme.sh"
+
 ### 4б. Экран входа и блокировки ###################################################
 bash "$CTX/login-theme.sh"
 

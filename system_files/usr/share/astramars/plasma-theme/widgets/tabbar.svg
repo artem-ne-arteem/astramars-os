@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="136" viewBox="0 0 400 136">
+<g id="north-active-tab-topleft"><path d="M10,10 L0,10 A10,10 0 0 1 10,0 Z" fill="#ffffff" fill-opacity="0.12"/><rect x="0" y="0" width="10" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="north-active-tab-top"><rect x="16" y="0" width="4" height="10" fill="#ffffff" fill-opacity="0.12"/><rect x="16" y="0" width="4" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="north-active-tab-topright"><path d="M26,10 L36,10 A10,10 0 0 0 26,0 Z" fill="#ffffff" fill-opacity="0.12"/><rect x="26" y="0" width="10" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="north-active-tab-left"><rect x="0" y="16" width="10" height="4" fill="#ffffff" fill-opacity="0.12"/><rect x="0" y="16" width="10" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="north-active-tab-center"><rect x="16" y="16" width="4" height="4" fill="#ffffff" fill-opacity="0.12"/><rect x="16" y="16" width="4" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="north-active-tab-right"><rect x="26" y="16" width="10" height="4" fill="#ffffff" fill-opacity="0.12"/><rect x="26" y="16" width="10" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="north-active-tab-bottomleft"><path d="M10,26 L0,26 A10,10 0 0 0 10,36 Z" fill="#ffffff" fill-opacity="0.12"/><rect x="0" y="26" width="10" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="north-active-tab-bottom"><rect x="16" y="26" width="4" height="10" fill="#ffffff" fill-opacity="0.12"/><rect x="16" y="26" width="4" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="north-active-tab-bottomright"><path d="M26,26 L36,26 A10,10 0 0 1 26,36 Z" fill="#ffffff" fill-opacity="0.12"/><rect x="26" y="26" width="10" height="10" fill="#000000" fill-opacity="0"/></g>
+<rect id="north-active-tab-hint-top-margin" x="0" y="42" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="north-active-tab-hint-bottom-margin" x="10" y="42" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="north-active-tab-hint-left-margin" x="20" y="42" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="north-active-tab-hint-right-margin" x="30" y="42" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<g id="south-active-tab-topleft"><path d="M10,78 L0,78 A10,10 0 0 1 10,68 Z" fill="#ffffff" fill-opacity="0.12"/><rect x="0" y="68" width="10" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="south-active-tab-top"><rect x="16" y="68" width="4" height="10" fill="#ffffff" fill-opacity="0.12"/><rect x="16" y="68" width="4" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="south-active-tab-topright"><path d="M26,78 L36,78 A10,10 0 0 0 26,68 Z" fill="#ffffff" fill-opacity="0.12"/><rect x="26" y="68" width="10" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="south-active-tab-left"><rect x="0" y="84" width="10" height="4" fill="#ffffff" fill-opacity="0.12"/><rect x="0" y="84" width="10" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="south-active-tab-center"><rect x="16" y="84" width="4" height="4" fill="#ffffff" fill-opacity="0.12"/><rect x="16" y="84" width="4" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="south-active-tab-right"><rect x="26" y="84" width="10" height="4" fill="#ffffff" fill-opacity="0.12"/><rect x="26" y="84" width="10" height="4" fill="#000000" fill-opacity="0"/></g>
+<g id="south-active-tab-bottomleft"><path d="M10,94 L0,94 A10,10 0 0 0 10,104 Z" fill="#ffffff" fill-opacity="0.12"/><rect x="0" y="94" width="10" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="south-active-tab-bottom"><rect x="16" y="94" width="4" height="10" fill="#ffffff" fill-opacity="0.12"/><rect x="16" y="94" width="4" height="10" fill="#000000" fill-opacity="0"/></g>
+<g id="south-active-tab-bottomright"><path d="M26,94 L36,94 A10,10 0 0 1 26,104 Z" fill="#ffffff" fill-opacity="0.12"/><rect x="26" y="94" width="10" height="10" fill="#000000" fill-opacity="0"/></g>
+<rect id="south-active-tab-hint-top-margin" x="0" y="110" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="south-active-tab-hint-bottom-margin" x="10" y="110" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="south-active-tab-hint-left-margin" x="20" y="110" width="6" height="6" fill="#000000" fill-opacity="0"/>
+<rect id="south-active-tab-hint-right-margin" x="30" y="110" width="6" height="6" fill="#000000" fill-opacity="0"/>
+</svg>

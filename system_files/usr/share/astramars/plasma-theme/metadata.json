@@ -1,0 +1,11 @@
+{
+    "KPlugin": {
+        "Authors": [{"Name": "AstraMars OS"}],
+        "Description": "Чёрное стекло со скруглениями — меню и всплывающие окна AstraMars",
+        "Id": "astramars",
+        "License": "GPL-2.0-or-later",
+        "Name": "AstraMars",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

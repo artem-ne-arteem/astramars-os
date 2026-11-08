@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=AstraMars: оформление меню
+Comment=Один раз настраивает меню приложений в стиле AstraMars
+Exec=/usr/libexec/astramars-menu-setup
+NoDisplay=true
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2

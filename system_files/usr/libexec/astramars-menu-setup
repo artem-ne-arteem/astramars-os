@@ -1,0 +1,52 @@
+#!/usr/bin/bash
+# AstraMars: новое оформление меню приложений — один раз для каждого пользователя при входе.
+#  - меню (Kickoff): избранное и все приложения сеткой, кнопки питания значками без подписей,
+#    кнопка меню — точечное кольцо AstraMars (если пользователь не ставил свою иконку);
+#  - стиль Plasma «AstraMars» — если пользователь не выбирал другой стиль.
+# Работает через официальный скриптовый интерфейс Plasma, изменения видны сразу.
+set -u
+
+VERSION=1
+MARK="${XDG_CONFIG_HOME:-$HOME/.config}/astramars/menu-setup-v$VERSION"
+[ -e "$MARK" ] && exit 0
+
+# Ждём, пока запустится рабочий стол
+for _ in $(seq 1 60); do
+    if gdbus introspect --session --dest org.kde.plasmashell --object-path /PlasmaShell >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+read -r -d '' SCRIPT <<'JS'
+panels().forEach(function (panel) {
+    panel.widgets("org.kde.plasma.kickoff").forEach(function (w) {
+        w.currentConfigGroup = ["General"];
+        var icon = String(w.readConfig("icon", ""));
+        if (icon === "" || icon.indexOf("start-here") === 0 || icon.indexOf("fedora") >= 0 ||
+                icon.indexOf("distributor") >= 0 || icon.indexOf("ublue") >= 0) {
+            w.writeConfig("icon", "astramars-start");
+        }
+        w.writeConfig("favoritesDisplay", 0);
+        w.writeConfig("applicationsDisplay", 0);
+        w.writeConfig("showActionButtonCaptions", false);
+        w.reloadConfig();
+    });
+});
+JS
+
+if ! gdbus call --session --dest org.kde.plasmashell --object-path /PlasmaShell \
+        --method org.kde.PlasmaShell.evaluateScript "$SCRIPT" >/dev/null 2>&1; then
+    echo "astramars-menu-setup: рабочий стол не ответил, попробую при следующем входе" >&2
+    exit 0
+fi
+
+# Стиль Plasma: только если пользователь не выбирал свой
+current="$(kreadconfig6 --file plasmarc --group Theme --key name 2>/dev/null || true)"
+case "$current" in
+    ""|default|breeze-dark|breeze)
+        plasma-apply-desktoptheme astramars >/dev/null 2>&1 || true ;;
+esac
+
+mkdir -p "$(dirname "$MARK")"
+touch "$MARK"
