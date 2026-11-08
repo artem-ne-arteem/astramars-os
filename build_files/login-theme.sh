@@ -20,11 +20,23 @@ ENV_FILES=(
 )
 
 ### Шрифт Doto (точечный, лицензия OFL)
+# Закреплён на версии из репозитория Google Fonts и проверяется по sha256
+DOTO_BASE="https://raw.githubusercontent.com/google/fonts/2c982e6bdf88fefbe9e34e78695d8e9e02d788ec/ofl/doto"
 mkdir -p /usr/share/fonts/doto
-curl -fsSL --retry 3 -o /usr/share/fonts/doto/Doto.ttf \
-    "https://github.com/google/fonts/raw/main/ofl/doto/Doto%5BROND,wght%5D.ttf"
-curl -fsSL --retry 3 -o /usr/share/fonts/doto/OFL.txt \
-    "https://github.com/google/fonts/raw/main/ofl/doto/OFL.txt"
+fetch() {  # fetch URL FILE SHA256 — с повторами, пока не совпадёт контрольная сумма
+    for attempt in 1 2 3 4 5; do
+        if curl -fsSL --retry 3 -o "$2" "$1" && echo "$3  $2" | sha256sum -c -; then
+            return 0
+        fi
+        echo "попытка $attempt: файл не скачался или повреждён, повторяю"
+        sleep $((attempt * 5))
+    done
+    return 1
+}
+fetch "$DOTO_BASE/Doto%5BROND,wght%5D.ttf" /usr/share/fonts/doto/Doto.ttf \
+    6f4fe7d37853b91df3698daa84cde2dbe1c9695d88c986e6510134910337d426
+fetch "$DOTO_BASE/OFL.txt" /usr/share/fonts/doto/OFL.txt \
+    26a7b58bdba6cda8a78ca6e8b3791d8013b8abc6d5e6519f84193893aee02020
 fc-cache -f /usr/share/fonts/doto
 fc-list | grep -i doto
 
