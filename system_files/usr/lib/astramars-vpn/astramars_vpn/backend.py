@@ -1,7 +1,9 @@
 """Связка интерфейса (QML) с серверами, подписками и службой VPN."""
 
+import hashlib
 import json
 import os
+import platform
 import socket
 import time
 import urllib.error
@@ -58,8 +60,37 @@ SUBSCRIPTION_AGENTS = (
 )
 
 
+def _device_headers() -> dict:
+    """Заголовки устройства (HWID). Панели вроде Remnawave с лимитом устройств
+    без них отвечают ошибкой. Идентификатор — хеш machine-id, сам machine-id не передаётся."""
+    try:
+        with open("/etc/machine-id", encoding="ascii") as f:
+            seed = f.read().strip()
+    except OSError:
+        seed = str(uuid.getnode())
+    hwid = hashlib.sha256(("astramars-vpn:" + seed).encode()).hexdigest()[:32]
+    os_version = ""
+    try:
+        with open("/etc/os-release", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("VERSION_ID="):
+                    os_version = line.split("=", 1)[1].strip().strip('"')
+    except OSError:
+        pass
+    return {
+        "x-hwid": hwid,
+        "x-device-os": "Linux",
+        "x-ver-os": os_version or platform.release(),
+        "x-device-model": "AstraMars OS",
+    }
+
+
+class SubscriptionDenied(Exception):
+    """Сервер подписки отказал (401/403/404) на все варианты запроса."""
+
+
 def _download(url: str, agent: str):
-    req = urllib.request.Request(url, headers={"User-Agent": agent, "Accept": "*/*"})
+    req = urllib.request.Request(url, headers={"User-Agent": agent, "Accept": "*/*", **_device_headers()})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             return r.read(5_000_000).decode("utf-8", "replace"), r.headers
@@ -77,8 +108,16 @@ def _download(url: str, agent: str):
 
 def fetch_subscription(url: str):
     last_error = None
+    denied = []
     for agent in SUBSCRIPTION_AGENTS:
-        body, headers = _download(url, agent)
+        try:
+            body, headers = _download(url, agent)
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404, 406, 451):
+                # Панель может пускать не все приложения или отдавать разные форматы — пробуем дальше
+                denied.append(e.code)
+                continue
+            raise
         try:
             servers, errors = links.parse_subscription(body)
         except links.LinkError as e:
@@ -94,7 +133,11 @@ def fetch_subscription(url: str):
             "info": links.parse_userinfo(headers.get("subscription-userinfo", "")),
             "title": links.parse_title(headers.get("profile-title", "")),
         }
-    raise last_error or links.LinkError("в подписке нет серверов")
+    if last_error:
+        raise last_error
+    if denied:
+        raise SubscriptionDenied(denied[-1])
+    raise links.LinkError("в подписке нет серверов")
 
 
 class Backend(QObject):
@@ -337,6 +380,10 @@ class Backend(QObject):
                     results.append((sub["id"], fetch_subscription(sub["url"]), ""))
                 except links.LinkError as e:
                     results.append((sub["id"], None, f"«{name}»: {e}"))
+                except SubscriptionDenied as e:
+                    results.append((sub["id"], None,
+                                    f"«{name}»: сервер не пускает это приложение (ошибка {e.args[0]}). "
+                                    "Провайдер может разрешать только свои приложения или ограничивать число устройств"))
                 except urllib.error.HTTPError as e:
                     results.append((sub["id"], None, f"«{name}»: сервер ответил ошибкой {e.code}"))
                 except (urllib.error.URLError, OSError, ValueError):
