@@ -93,14 +93,8 @@ Item {
         Item { implicitHeight: 30 }
     }
     BC.RejectPasswordAnimation { target: clock }
-    Timer {
-        interval: 1500; running: true
-        onTriggered: {
-            // warn, а не log: в Fedora отладочный вывод QML выключен
-            console.warn("ASTRAMARS_LOGIN_THEME", clock.dotFont === "Doto" ? "OVERLAY_OK" : "OVERLAY_NOT_USED")
-            Qt.quit()
-        }
-    }
+    // Python читает это свойство: если подмена сработала, у часов есть dotFont = "Doto"
+    property string overlayCheck: clock.dotFont === "Doto" ? "OVERLAY_OK" : "OVERLAY_NOT_USED"
 }
 QML
 # Отдельной программы qml в образе нет — грузим через PySide6 (те же системные Qt и модули)
@@ -119,7 +113,12 @@ if view.status() != QQuickView.Status.Ready:
     print("QML Error: test scene did not load", flush=True)
     sys.exit(1)
 view.show()
-sys.exit(app.exec())
+from PySide6.QtCore import QTimer
+def finish():
+    print("ASTRAMARS_LOGIN_THEME", view.rootObject().property("overlayCheck"), flush=True)
+    app.quit()
+QTimer.singleShot(2000, finish)
+app.exec()
 PY
 QML2_IMPORT_PATH="$OVL_ROOT" QML_IMPORT_PATH="$OVL_ROOT" QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
     timeout 60 python3 "$TEST/run.py" "$TEST/test.qml" > "$TEST/log.txt" 2>&1 || true
