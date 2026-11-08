@@ -1,0 +1,9 @@
+[Unit]
+Description=AstraMars OS: проверка обновлений системы
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/astramars-update check
+TimeoutStartSec=15min

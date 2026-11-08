@@ -84,6 +84,11 @@ def main():
         if os.environ.get("ASTRAMARS_STORE_SHOT_INSTALL"):
             delay = int(os.environ.get("ASTRAMARS_STORE_SHOT_DELAY", "3000"))
             QTimer.singleShot(max(300, delay - 650), lambda: backend.install(os.environ["ASTRAMARS_STORE_SHOT_INSTALL"]))
+        if os.environ.get("ASTRAMARS_STORE_SHOT_CATEGORY"):
+            QTimer.singleShot(200, lambda: backend.setCategory(os.environ["ASTRAMARS_STORE_SHOT_CATEGORY"]))
+        if os.environ.get("ASTRAMARS_STORE_SHOT_ACTION"):
+            delay = int(os.environ.get("ASTRAMARS_STORE_SHOT_DELAY", "3000"))
+            QTimer.singleShot(max(300, delay - 1200), getattr(backend, os.environ["ASTRAMARS_STORE_SHOT_ACTION"]))
         if os.environ.get("ASTRAMARS_STORE_SHOT_QUERY"):
             QTimer.singleShot(300, lambda: backend.setQuery(os.environ["ASTRAMARS_STORE_SHOT_QUERY"]))
 

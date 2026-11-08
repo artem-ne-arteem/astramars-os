@@ -10,13 +10,15 @@ Rectangle {
     property string summary: ""
     property string icon: ""
     property string developer: ""
-    property string state_: "available"    // available | installed | queued | installing | removing
+    property string state_: "available"    // available | installed | update | queued | installing | updating | removing
     property int progress: 0
     signal installClicked()
     signal openClicked()
     signal removeClicked()
+    signal updateClicked()
 
-    readonly property bool busy: state_ === "queued" || state_ === "installing" || state_ === "removing"
+    readonly property bool busy: state_ === "queued" || state_ === "installing" || state_ === "updating" || state_ === "removing"
+    readonly property bool measured: (state_ === "installing" || state_ === "updating") && progress > 0
 
     radius: 22
     color: mouse.containsMouse ? Theme.surfaceHover : Theme.surface
@@ -121,7 +123,8 @@ Rectangle {
                 Text {
                     text: card.state_ === "queued" ? "В очереди…"
                         : card.state_ === "removing" ? "Удаляю…"
-                        : (card.progress > 0 ? "Устанавливаю · " + card.progress + "%" : "Устанавливаю…")
+                        : (card.state_ === "updating" ? "Обновляю" : "Устанавливаю")
+                          + (card.progress > 0 ? " · " + card.progress + "%" : "…")
                     font.pixelSize: 12
                     font.weight: Font.Medium
                     color: Theme.fg
@@ -135,12 +138,11 @@ Rectangle {
                         height: parent.height
                         radius: 2
                         color: Theme.accent
-                        width: card.state_ === "installing" && card.progress > 0
-                               ? parent.width * card.progress / 100 : parent.width * 0.3
+                        width: card.measured ? parent.width * card.progress / 100 : parent.width * 0.3
                         Behavior on width { NumberAnimation { duration: 250 } }
                         // Бегущий отрезок, пока процент неизвестен
                         SequentialAnimation on x {
-                            running: card.busy && !(card.state_ === "installing" && card.progress > 0)
+                            running: card.busy && !card.measured
                             loops: Animation.Infinite
                             NumberAnimation { from: 0; to: parent ? parent.width * 0.7 : 0; duration: 900; easing.type: Easing.InOutSine }
                             NumberAnimation { to: 0; duration: 900; easing.type: Easing.InOutSine }
@@ -180,7 +182,7 @@ Rectangle {
                 implicitWidth: btnText.implicitWidth + 36
                 implicitHeight: 38
                 radius: 19
-                readonly property bool primary: card.state_ === "available"
+                readonly property bool primary: card.state_ === "available" || card.state_ === "update"
                 color: primary ? (btnMouse.containsMouse ? "#ffffff" : Theme.fg)
                                : (btnMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.12) : Theme.glass)
                 border.width: primary ? 0 : 1
@@ -190,7 +192,7 @@ Rectangle {
                 Text {
                     id: btnText
                     anchors.centerIn: parent
-                    text: card.state_ === "installed" ? "Открыть" : "Установить"
+                    text: card.state_ === "installed" ? "Открыть" : card.state_ === "update" ? "Обновить" : "Установить"
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
                     color: parent.primary ? Theme.bg : Theme.fg
@@ -200,7 +202,8 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: card.state_ === "installed" ? card.openClicked() : card.installClicked()
+                    onClicked: card.state_ === "installed" ? card.openClicked()
+                             : card.state_ === "update" ? card.updateClicked() : card.installClicked()
                 }
             }
         }

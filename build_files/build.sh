@@ -73,7 +73,8 @@ ASTRAMARS_VPN_DEV=1 ASTRAMARS_VPN_HOME=/tmp/vpn-check QT_QPA_PLATFORM=offscreen 
 rm -rf /tmp/vpn-check
 
 ### 5б. AstraMars Store (магазин приложений) ###################################
-chmod +x /usr/bin/astramars-store
+chmod +x /usr/bin/astramars-store /usr/libexec/astramars-update
+bootc --version
 mkdir -p /tmp/store-check
 curl -fsSL --retry 3 -o /tmp/store-check/appstream.xml.gz     https://dl.flathub.org/repo/appstream/x86_64/appstream.xml.gz
 python3 "$CTX/store_selftest.py" /usr/lib/astramars-store /tmp/store-check

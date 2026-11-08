@@ -63,6 +63,22 @@ class Flatpak:
         if not ok:
             raise FlatpakError(_explain(out))
 
+    def updates(self):
+        """Приложения, для которых во Flathub есть новая версия (системные и пользовательские)."""
+        found = set()
+        for scope in ("--system", "--user"):
+            p = self._run("remote-ls", scope, "--updates", "--app", "--columns=application", timeout=300)
+            if p.returncode == 0:
+                found |= {l.strip() for l in p.stdout.splitlines() if l.strip() and "." in l}
+        return found
+
+    def update(self, app_id, on_progress):
+        """app_id=None — обновить всё (приложения и среды выполнения)."""
+        args = ["update", "-y", "--noninteractive"] + ([app_id] if app_id else [])
+        ok, out = self._stream(args, on_progress)
+        if not ok:
+            raise FlatpakError(_explain(out))
+
     def launch(self, app_id):
         subprocess.Popen(["flatpak", "run", app_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          start_new_session=True)
@@ -94,6 +110,7 @@ class FakeFlatpak:
 
     def __init__(self):
         self._installed = {"org.telegram.desktop", "org.mozilla.firefox", "org.libreoffice.LibreOffice"}
+        self._updated = set()
 
     def ensure_flathub(self):
         pass
@@ -109,6 +126,15 @@ class FakeFlatpak:
             on_progress(p)
             time.sleep(0.12)
         self._installed.add(app_id)
+
+    def updates(self):
+        return {i for i in ("org.telegram.desktop", "org.mozilla.firefox") if i in self._installed} - self._updated
+
+    def update(self, app_id, on_progress):
+        for p in range(0, 101, 20):
+            on_progress(p)
+            time.sleep(0.1)
+        self._updated |= {app_id} if app_id else set(self._installed)
 
     def uninstall(self, app_id, on_progress):
         on_progress(50)

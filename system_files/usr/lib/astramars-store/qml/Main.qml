@@ -105,37 +105,70 @@ ApplicationWindow {
             }
         }
 
-        // --- разделы -------------------------------------------------------------
-        Flickable {
+        // --- разделы (переносятся на вторую строку, если не помещаются) -------------
+        Flow {
             Layout.fillWidth: true
-            Layout.preferredHeight: 38
-            contentWidth: chips.implicitWidth
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            Row {
-                id: chips
-                spacing: 8
-                Repeater {
-                    model: backend.categories
-                    delegate: Chip {
-                        required property var modelData
-                        text: modelData.title
-                        active: backend.category === modelData.key
-                        onClicked: {
-                            search.text = ""
-                            backend.setCategory(modelData.key)
-                        }
+            spacing: 8
+            Repeater {
+                model: backend.categories
+                delegate: Chip {
+                    required property var modelData
+                    text: modelData.title
+                    active: backend.category === modelData.key
+                    onClicked: {
+                        search.text = ""
+                        backend.setCategory(modelData.key)
                     }
                 }
             }
         }
 
-        Text {
-            text: backend.title.toUpperCase()
-            font.pixelSize: 13
-            font.weight: Font.Bold
-            font.letterSpacing: 2.5
-            color: Theme.muted
+        // Страница «Обновления»: система сверху
+        SystemCard {
+            Layout.fillWidth: true
+            visible: backend.category === "updates"
+            info: backend.system
+            onCheckClicked: backend.checkUpdates()
+            onUpdateClicked: backend.updateSystem()
+            onRebootClicked: backend.rebootNow()
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+            Text {
+                text: backend.category === "updates"
+                      ? "ПРИЛОЖЕНИЯ" + (backend.appUpdatesCount ? " · " + backend.appUpdatesCount : "")
+                      : backend.title.toUpperCase()
+                font.pixelSize: 13
+                font.weight: Font.Bold
+                font.letterSpacing: 2.5
+                color: Theme.muted
+            }
+            Item { Layout.fillWidth: true }
+            // «Обновить всё»: система и все приложения одной кнопкой
+            Rectangle {
+                visible: backend.category === "updates" && backend.updatesCount > 0
+                implicitWidth: allText.implicitWidth + 40
+                implicitHeight: 40
+                radius: 20
+                color: allMouse.containsMouse ? "#ffffff" : Theme.fg
+                Text {
+                    id: allText
+                    anchors.centerIn: parent
+                    text: "Обновить всё"
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                    color: Theme.bg
+                }
+                MouseArea {
+                    id: allMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: backend.updateAll()
+                }
+            }
         }
 
         // --- сетка приложений ------------------------------------------------------
@@ -174,6 +207,7 @@ ApplicationWindow {
                     onInstallClicked: backend.install(appId)
                     onOpenClicked: backend.launch(appId)
                     onRemoveClicked: backend.remove(appId)
+                    onUpdateClicked: backend.updateApp(appId)
                 }
             }
 
@@ -184,7 +218,8 @@ ApplicationWindow {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: backend.loading ? "· · ·" : backend.category === "search" ? "Ничего не нашлось"
-                        : backend.category === "installed" ? "Здесь появятся установленные приложения" : "Раздел пуст"
+                        : backend.category === "installed" ? "Здесь появятся установленные приложения"
+                        : backend.category === "updates" ? "Все приложения обновлены" : "Раздел пуст"
                     font.family: backend.loading ? Theme.dots : ""
                     font.pixelSize: backend.loading ? 40 : 16
                     color: Theme.muted

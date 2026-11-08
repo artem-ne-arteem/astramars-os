@@ -1,0 +1,133 @@
+#!/usr/bin/python3
+"""Обновление AstraMars OS для магазина: проверка и скачивание новой версии системы через bootc.
+
+Запускается от root только через службы astramars-update-check.service и
+astramars-update-apply.service (их администраторам разрешено запускать без пароля).
+Результат пишет в /run/astramars-update/status.json — его читает AstraMars Store.
+
+  astramars-update check   — есть ли новая версия образа
+  astramars-update apply   — скачать её; применится после перезагрузки
+"""
+
+import datetime as dt
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+RUN_DIR = "/run/astramars-update"
+STATUS = os.path.join(RUN_DIR, "status.json")
+
+
+def now():
+    return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+
+
+def image_info(entry):
+    if not entry or not entry.get("image"):
+        return None
+    img = entry["image"]
+    return {
+        "image": (img.get("image") or {}).get("image"),
+        "version": img.get("version"),
+        "timestamp": img.get("timestamp"),
+        "digest": img.get("imageDigest"),
+    }
+
+
+def host_status():
+    p = subprocess.run(["bootc", "status", "--json"], capture_output=True, text=True, timeout=120)
+    try:
+        status = json.loads(p.stdout).get("status") or {}
+    except ValueError:
+        return {"booted": None, "staged": None}
+    return {"booted": image_info(status.get("booted")), "staged": image_info(status.get("staged"))}
+
+
+def parse_check(output):
+    """Разбор вывода `bootc upgrade --check`."""
+    if "No changes in" in output or "No update available" in output:
+        return None
+    if "Update available" not in output:
+        return None
+    version = re.search(r"^\s*Version:\s*(\S+)", output, re.M)
+    digest = re.search(r"^\s*Digest:\s*(sha256:[0-9a-f]+)", output, re.M)
+    return {"version": version.group(1) if version else None, "digest": digest.group(1) if digest else None}
+
+
+def write(data):
+    os.makedirs(RUN_DIR, exist_ok=True)
+    os.chmod(RUN_DIR, 0o755)
+    tmp = STATUS + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, STATUS)
+
+
+def tail(text, n=3):
+    lines = [l.strip() for l in text.strip().splitlines() if l.strip()]
+    return "\n".join(lines[-n:])
+
+
+def check():
+    data = host_status()
+    data.update(phase="checking", updated_at=now())
+    write(data)
+    p = subprocess.run(["bootc", "upgrade", "--check"], capture_output=True, text=True, timeout=600)
+    out = p.stdout + p.stderr
+    data = host_status()
+    data.update(
+        phase="idle",
+        ok=p.returncode == 0,
+        available=parse_check(out) if p.returncode == 0 else None,
+        error="" if p.returncode == 0 else tail(out),
+        checked_at=now(),
+        updated_at=now(),
+    )
+    write(data)
+    return 0 if p.returncode == 0 else 1
+
+
+def apply():
+    data = host_status()
+    data.update(phase="downloading", line="Подключаюсь к серверу обновлений…", updated_at=now())
+    write(data)
+    proc = subprocess.Popen(["bootc", "upgrade"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, bufsize=1)
+    lines, last_write = [], 0.0
+    for line in proc.stdout:
+        line = line.strip()
+        if not line:
+            continue
+        lines.append(line)
+        if time.time() - last_write > 0.7:
+            data.update(line=line[-160:], updated_at=now())
+            write(data)
+            last_write = time.time()
+    proc.wait()
+    out = "\n".join(lines)
+    data = host_status()
+    data.update(
+        phase="idle",
+        ok=proc.returncode == 0,
+        applied=proc.returncode == 0,
+        available=None,
+        error="" if proc.returncode == 0 else tail(out),
+        checked_at=now(),
+        updated_at=now(),
+    )
+    write(data)
+    return proc.returncode
+
+
+if __name__ == "__main__":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+    if cmd == "check":
+        sys.exit(check())
+    if cmd == "apply":
+        sys.exit(apply())
+    print(__doc__)
+    sys.exit(2)

@@ -29,3 +29,18 @@ for q in ("telegram", "фото", "minecraft"):
     print(f"поиск «{q}»:", found)
     assert found, f"поиск «{q}» ничего не нашёл"
 print("Самотест магазина пройден")
+
+# Разбор вывода bootc в помощнике обновлений (строки — из bootc crates/lib/src/cli.rs)
+import importlib.machinery  # noqa: E402
+sys.dont_write_bytecode = True  # не оставлять кэш Python в образе
+import importlib.util  # noqa: E402
+
+loader = importlib.machinery.SourceFileLoader("astramars_update", "/usr/libexec/astramars-update")
+spec = importlib.util.spec_from_loader("astramars_update", loader)
+upd = importlib.util.module_from_spec(spec)
+loader.exec_module(upd)
+ref = "ostree-unverified-registry:ghcr.io/artem-ne-arteem/astramars-os:latest"
+assert upd.parse_check(f"No changes in: {ref}\n") is None
+found = upd.parse_check(f"Update available for: {ref}\n  Version: 45.1\n  Digest: sha256:abc\n")
+assert found == {"version": "45.1", "digest": "sha256:abc"}, found
+print("Разбор вывода bootc: OK")

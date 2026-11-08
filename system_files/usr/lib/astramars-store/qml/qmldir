@@ -1,3 +1,4 @@
 singleton Theme 1.0 Theme.qml
 AppCard 1.0 AppCard.qml
 Chip 1.0 Chip.qml
+SystemCard 1.0 SystemCard.qml

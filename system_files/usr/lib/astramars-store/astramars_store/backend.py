@@ -2,12 +2,13 @@
 
 from concurrent.futures import ThreadPoolExecutor
 
-from PySide6.QtCore import Property, QAbstractListModel, QModelIndex, QObject, Qt, Signal, Slot
+from PySide6.QtCore import Property, QAbstractListModel, QModelIndex, QObject, Qt, QTimer, Signal, Slot
 
-from . import catalog, flatpak
+from . import catalog, flatpak, updates
 
 POPULAR = "popular"
 INSTALLED = "installed"
+UPDATES = "updates"
 SEARCH = "search"
 
 
@@ -61,6 +62,11 @@ class Backend(QObject):
     _catalogLoaded = Signal(object, object)
     _jobProgress = Signal(str, int)
     _jobDone = Signal(str, str, str)  # id, action, error
+    _appUpdatesFound = Signal(object)
+    _systemRead = Signal(object, str)
+
+    systemChanged = Signal()
+    updatesChanged = Signal()
 
     def __init__(self, fp=None):
         super().__init__()
@@ -74,6 +80,14 @@ class Backend(QObject):
         self._model = AppModel()
         self._io = ThreadPoolExecutor(max_workers=2)
         self._queue = ThreadPoolExecutor(max_workers=1)   # установки по одной
+        self._sys = updates.create()
+        self._app_updates = set()
+        self._system = updates.summarize({}, "")
+        self._ticks = 0
+        self._appUpdatesFound.connect(self._on_app_updates)
+        self._systemRead.connect(self._on_system)
+        self._sys_timer = QTimer(self, interval=1500, timeout=self._poll_system)
+        self._sys_timer.start()
         self._catalogLoaded.connect(self._on_catalog)
         self._jobProgress.connect(self._on_progress)
         self._jobDone.connect(self._on_done)
@@ -82,22 +96,41 @@ class Backend(QObject):
         def work():
             self._fp.ensure_flathub()
             self._catalogLoaded.emit(catalog.load_catalog(), self._fp.installed())
+            self._appUpdatesFound.emit(self._fp.updates())
             self._fp.refresh_appstream()        # свежий список — может занять время
             self._catalogLoaded.emit(catalog.load_catalog(), self._fp.installed())
         self._io.submit(work)
+        self._start_system("check", quiet=True)
+        self._poll_system(force=True)
 
     def shutdown(self):
+        self._sys_timer.stop()
         self._io.shutdown(wait=False, cancel_futures=True)
         self._queue.shutdown(wait=False, cancel_futures=True)
 
     # --- свойства --------------------------------------------------------------------
 
-    @Property("QVariantList", constant=True)
+    @Property("QVariantList", notify=updatesChanged)
     def categories(self):
-        chips = [{"key": POPULAR, "title": "Популярное"}]
+        count = self.updatesCount
+        chips = [{"key": POPULAR, "title": "Популярное"},
+                 {"key": UPDATES, "title": f"Обновления · {count}" if count else "Обновления"}]
         chips += [{"key": key, "title": title} for key, title, _ in catalog.CURATED]
         chips.append({"key": INSTALLED, "title": "Установленные"})
         return chips
+
+    @Property(int, notify=updatesChanged)
+    def updatesCount(self):
+        system = 1 if self._system.get("state") in ("available", "ready") else 0
+        return len(self._app_updates) + system
+
+    @Property(int, notify=updatesChanged)
+    def appUpdatesCount(self):
+        return len(self._app_updates)
+
+    @Property("QVariantMap", notify=systemChanged)
+    def system(self):
+        return dict(self._system)
 
     @Property(str, notify=categoryChanged)
     def category(self):
@@ -107,6 +140,8 @@ class Backend(QObject):
     def title(self):
         if self._query.strip():
             return "Поиск"
+        if self._category == UPDATES:
+            return "Обновления"
         return next((c["title"] for c in self.categories if c["key"] == self._category), "")
 
     @Property(bool, notify=loadingChanged)
@@ -153,6 +188,32 @@ class Backend(QObject):
         self._enqueue(app_id, "remove")
 
     @Slot(str)
+    def updateApp(self, app_id):
+        self._enqueue(app_id, "update")
+
+    @Slot()
+    def checkUpdates(self):
+        self._start_system("check")
+        self._io.submit(lambda: self._appUpdatesFound.emit(self._fp.updates()))
+
+    @Slot()
+    def updateSystem(self):
+        self._start_system("apply")
+
+    @Slot()
+    def updateAll(self):
+        if self._system.get("state") in ("available", "current", "unknown", "error"):
+            self._start_system("apply", quiet=True)
+        for app_id in sorted(self._app_updates):
+            self._enqueue(app_id, "update")
+        if not self._app_updates and self._system.get("state") == "ready":
+            self.toast.emit("Всё уже скачано — осталось перезагрузить компьютер")
+
+    @Slot()
+    def rebootNow(self):
+        self._sys.reboot()
+
+    @Slot(str)
     def launch(self, app_id):
         self._fp.launch(app_id)
         self.toast.emit(f"Запускаю «{self._name(app_id)}»")
@@ -165,6 +226,9 @@ class Backend(QObject):
     def _visible_ids(self):
         if self._query.strip():
             return [a["id"] for a in catalog.search(self._apps, self._query)]
+        if self._category == UPDATES:
+            return sorted(self._app_updates | {i for i, j in self._jobs.items() if j["action"] == "update"},
+                          key=lambda i: self._name(i).lower())
         if self._category == INSTALLED:
             ids = sorted(self._installed | {i for i, j in self._jobs.items() if j["action"] == "install"},
                          key=lambda i: self._name(i).lower())
@@ -188,7 +252,10 @@ class Backend(QObject):
         app = self._apps.get(app_id) or {"name": app_id, "summary": "", "icon": "", "developer": ""}
         job = self._jobs.get(app_id)
         if job:
-            state = "queued" if job["queued"] else ("installing" if job["action"] == "install" else "removing")
+            state = "queued" if job["queued"] else {"install": "installing", "remove": "removing",
+                                                    "update": "updating"}[job["action"]]
+        elif app_id in self._app_updates:
+            state = "update"
         else:
             state = "installed" if app_id in self._installed else "available"
         return {
@@ -210,7 +277,7 @@ class Backend(QObject):
         def work():
             self._jobProgress.emit(app_id, 0)
             try:
-                fn = self._fp.install if action == "install" else self._fp.uninstall
+                fn = {"install": self._fp.install, "remove": self._fp.uninstall, "update": self._fp.update}[action]
                 fn(app_id, lambda p: self._jobProgress.emit(app_id, p))
                 self._jobDone.emit(app_id, action, "")
             except flatpak.FlatpakError as e:
@@ -243,10 +310,54 @@ class Backend(QObject):
         elif action == "install":
             self._installed.add(app_id)
             self.toast.emit(f"«{name}» установлено — ищите в меню")
+        elif action == "update":
+            self._app_updates.discard(app_id)
+            self.updatesChanged.emit()
+            self.toast.emit(f"«{name}» обновлено")
         else:
             self._installed.discard(app_id)
             self.toast.emit(f"«{name}» удалено")
-        if self._category == INSTALLED and not self._query.strip():
+        if self._category in (INSTALLED, UPDATES) and not self._query.strip():
             self._refresh()
         else:
             self._model.update_app(self._item(app_id))
+
+    # --- обновления системы и приложений ------------------------------------------------
+
+    def _start_system(self, kind, quiet=False):
+        try:
+            self._sys.start(kind)
+            if kind == "apply" and not quiet:
+                self.toast.emit("Скачиваю обновление системы — можно продолжать работать")
+            self._poll_system(force=True)
+        except (updates.UpdateError, OSError) as e:
+            if not quiet:
+                self.toast.emit(f"Обновление системы: {e}")
+
+    def _poll_system(self, force=False):
+        self._ticks += 1
+        busy = self._system.get("state") in ("checking", "downloading")
+        if not (force or busy or self._category == UPDATES or self._ticks % 20 == 0):
+            return
+        self._io.submit(lambda: self._systemRead.emit(self._sys.read(), self._sys.running()))
+
+    def _on_system(self, raw, running):
+        info = updates.summarize(raw, running)
+        was = self._system.get("state")
+        if info != self._system:
+            self._system = info
+            self.systemChanged.emit()
+            self.updatesChanged.emit()
+        if was == "downloading" and info["state"] == "ready":
+            self.toast.emit("Обновление системы скачано — перезагрузите компьютер")
+        elif was == "downloading" and info["state"] == "error":
+            self.toast.emit("Обновление системы не скачалось: " + info["error"].splitlines()[-1][:120])
+
+    def _on_app_updates(self, found):
+        self._app_updates = set(found)
+        self.updatesChanged.emit()
+        if self._category == UPDATES and not self._query.strip():
+            self._refresh()
+        else:
+            for app_id in found:
+                self._model.update_app(self._item(app_id))

@@ -1,0 +1,9 @@
+[Unit]
+Description=AstraMars OS: скачивание обновления системы
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/astramars-update apply
+TimeoutStartSec=2h
