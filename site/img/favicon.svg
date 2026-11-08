@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- AstraMars: кнопка меню приложений -->
+  <g fill="#f2f2f2">
+    <circle cx="32.00" cy="10.00" r="3.6"/>
+    <circle cx="43.00" cy="12.95" r="3.6"/>
+    <circle cx="51.05" cy="21.00" r="3.6"/>
+    <circle cx="54.00" cy="32.00" r="3.6"/>
+    <circle cx="51.05" cy="43.00" r="3.6"/>
+    <circle cx="43.00" cy="51.05" r="3.6"/>
+    <circle cx="32.00" cy="54.00" r="3.6"/>
+    <circle cx="21.00" cy="51.05" r="3.6"/>
+    <circle cx="12.95" cy="43.00" r="3.6"/>
+    <circle cx="10.00" cy="32.00" r="3.6"/>
+    <circle cx="12.95" cy="21.00" r="3.6"/>
+    <circle cx="21.00" cy="12.95" r="3.6"/>
+  </g>
+  <circle cx="32" cy="32" r="7" fill="#ff3b30"/>
+</svg>

@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AstraMars OS</title>
+<meta name="description" content="AstraMars OS — операционная система на Fedora и KDE Plasma: тёмная, красивая, обновляется одной кнопкой и откатывается, если что-то пошло не так.">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="AstraMars OS">
+<meta property="og:description" content="Fedora + KDE Plasma в точечном стиле. Магазин приложений, быстрые действия и обновления одной кнопкой.">
+<meta property="og:image" content="img/logo.jpg">
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:ROND,wght@100,600;100,800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Раскладка: одна колонка до 1180px; первый экран — текст и логотип рядом; ниже — карточки и витрина. */
+:root {
+  --bg: #000000;
+  --surface: #0d0d0d;
+  --surface-2: #151515;
+  --line: #242424;
+  --fg: #f2f2f2;
+  --muted: #8f8f8f;
+  --faint: #5a5a5a;
+  --accent: #ff3b30;
+  --glass: rgba(255, 255, 255, 0.06);
+  --dots: "Doto", "JetBrains Mono", ui-monospace, monospace;
+  --text: "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --radius: 28px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 17px/1.6 var(--text);
+  -webkit-font-smoothing: antialiased;
+  /* сетка точек, как на обоях экрана входа */
+  background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: inherit; }
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.dots { font-family: var(--dots); font-variation-settings: "ROND" 100, "wght" 700; letter-spacing: 0.08em; }
+.eyebrow {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h2 { font-size: clamp(30px, 4.4vw, 52px); line-height: 1.08; font-weight: 800; letter-spacing: -0.02em; }
+h3 { font-size: 20px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; }
+p { margin: 0; }
+.lead { font-size: clamp(18px, 2vw, 21px); color: #cfcfcf; max-width: 60ch; }
+
+/* --- навигация ----------------------------------------------------------- */
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30;
+  background: rgba(0,0,0,0.75);
+}
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border-bottom: 1px solid var(--line);
+}
+.nav .wrap { display: flex; align-items: center; gap: 28px; padding-block: 14px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; font-size: 22px; }
+.brand img { width: 28px; height: 28px; }
+.nav-links { display: flex; gap: 24px; margin-left: auto; }
+.nav-links a { text-decoration: none; color: var(--muted); font-size: 15px; font-weight: 500; }
+.nav-links a:hover, .nav-links a:focus-visible { color: var(--fg); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 48px; padding: 0 26px; border-radius: 999px;
+  font: 600 16px/1 var(--text); text-decoration: none; cursor: pointer; border: 1px solid transparent;
+  transition: transform .12s ease, background .15s ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--fg); color: #000; }
+.btn-primary:hover { background: #fff; }
+.btn-glass { background: var(--glass); color: var(--fg); border-color: var(--line); }
+.btn-glass:hover { background: rgba(255,255,255,0.12); }
+.btn-sm { min-height: 38px; padding: 0 18px; font-size: 14px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* --- первый экран ------------------------------------------------------- */
+.hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+.hero::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 62%;
+  background: linear-gradient(to bottom, transparent, #000 92%), url("img/dunes.jpg") center bottom / cover no-repeat;
+  opacity: 0.85; pointer-events: none;
+}
+.hero .wrap {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: 56px; align-items: center;
+  padding-block: 88px 104px;
+}
+.hero-title { font-size: clamp(54px, 9.5vw, 132px); line-height: 0.95; margin: 22px 0 6px; }
+.hero-title .os { color: var(--muted); }
+.hero .lead { margin-top: 22px; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+.chip { font: 500 13px/1 var(--mono); color: var(--muted); padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass); }
+.hero-logo {
+  border-radius: 36px; overflow: hidden; border: 1px solid var(--line);
+  box-shadow: 0 40px 120px -30px rgba(255, 59, 48, 0.25), 0 30px 80px -40px rgba(0,0,0,0.9);
+  aspect-ratio: 1 / 1;
+}
+.hero-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+/* --- цифры -------------------------------------------------------------- */
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.fact { padding: 34px 24px; border-right: 1px solid var(--line); }
+.fact:last-child { border-right: 0; }
+.fact b { display: block; font-family: var(--dots); font-variation-settings: "ROND" 100, "wght" 800; font-size: clamp(40px, 5vw, 60px); line-height: 1; font-weight: 800; }
+.fact span { display: block; margin-top: 12px; color: var(--muted); font-size: 15px; }
+
+/* --- секции ------------------------------------------------------------- */
+section { padding-block: 104px; }
+.section-head { display: grid; gap: 16px; margin-bottom: 48px; max-width: 760px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 26px; display: flex; flex-direction: column; gap: 12px; min-width: 0;
+}
+.card p { color: var(--muted); font-size: 15.5px; }
+.card .tag { font: 500 12px/1 var(--mono); color: var(--faint); letter-spacing: 0.04em; }
+.card .ico { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--glass); border: 1px solid var(--line); }
+.card .ico svg { width: 22px; height: 22px; stroke: var(--fg); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* --- витрина ------------------------------------------------------------ */
+.show { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 56px; align-items: center; padding-block: 56px; }
+.show + .show { border-top: 1px solid var(--line); }
+.show.flip { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
+.show.flip .show-text { order: 2; }
+.show-text { display: grid; gap: 18px; min-width: 0; }
+.show-text ul { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; color: #cfcfcf; }
+.show-text li { display: flex; gap: 12px; }
+.show-text li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 11px; border-radius: 50%; background: var(--accent); }
+.shot { border-radius: 22px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 30px 90px -40px rgba(0,0,0,0.9); }
+.shot.narrow { max-width: 360px; justify-self: center; }
+
+/* --- установка ---------------------------------------------------------- */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: step; }
+.steps li {
+  counter-increment: step; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 18px; align-items: start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px;
+}
+.steps li::before {
+  content: counter(step); font-family: var(--dots); font-variation-settings: "ROND" 100, "wght" 800;
+  font-size: 44px; line-height: 1; color: var(--fg);
+}
+.steps h3 { font-size: 18px; margin-bottom: 6px; }
+.steps p { color: var(--muted); font-size: 15.5px; }
+.steps a { color: var(--fg); text-underline-offset: 3px; }
+.cmd {
+  margin-top: 14px; display: flex; align-items: stretch; border-radius: 14px; overflow: hidden;
+  background: #050505; border: 1px solid var(--line);
+}
+.cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: pre; padding: 14px 16px; font: 400 14px/1.5 var(--mono); color: #e8e8e8; }
+.cmd button {
+  flex: none; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--fg);
+  font: 600 13px var(--text); padding: 0 18px; cursor: pointer;
+}
+.cmd button:hover { background: var(--glass); }
+.note { margin-top: 18px; color: var(--muted); font-size: 15px; }
+.note code { font-family: var(--mono); color: var(--fg); background: var(--glass); padding: 2px 7px; border-radius: 6px; }
+
+/* --- вопросы ------------------------------------------------------------ */
+.faq { display: grid; gap: 10px; max-width: 860px; }
+.faq details { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 0 22px; }
+.faq summary { cursor: pointer; list-style: none; padding: 20px 0; font-weight: 600; font-size: 17px; display: flex; justify-content: space-between; gap: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font: 400 24px/1 var(--mono); color: var(--muted); transition: transform .2s ease; }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq details p { padding-bottom: 20px; color: var(--muted); max-width: 70ch; }
+
+/* --- подвал ------------------------------------------------------------- */
+footer { border-top: 1px solid var(--line); padding-block: 48px 64px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; align-items: flex-start; }
+footer .brand { font-size: 18px; color: var(--fg); }
+footer .small { max-width: 52ch; margin-top: 12px; color: var(--faint); font-size: 13px; }
+footer nav { display: flex; gap: 22px; flex-wrap: wrap; }
+footer nav a { text-decoration: none; }
+footer nav a:hover { color: var(--fg); }
+
+/* --- телефоны и планшеты ------------------------------------------------- */
+@media (max-width: 920px) {
+  .hero .wrap, .show, .show.flip { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .show.flip .show-text { order: 0; }
+  .hero-logo { max-width: 460px; }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fact:nth-child(2) { border-right: 0; }
+  .fact:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .nav-links { display: none; }
+  .nav .btn { margin-left: auto; }
+  section { padding-block: 72px; }
+}
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .hero .wrap { padding-block: 56px 72px; }
+  .steps li { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .fact { padding: 26px 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .btn, .faq summary::after { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Главное меню">
+  <div class="wrap">
+    <a class="brand dots" href="#top"><img src="img/favicon.svg" alt="">ASTRAMARS</a>
+    <div class="nav-links">
+      <a href="#features">Возможности</a>
+      <a href="#screens">Как выглядит</a>
+      <a href="#install">Установка</a>
+      <a href="#faq">Вопросы</a>
+    </div>
+    <a class="btn btn-glass btn-sm" href="https://github.com/artem-ne-arteem/astramars-os">GitHub</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Fedora 45 · KDE Plasma 6.8 · версия 0.1</span>
+      <h1 class="hero-title dots">ASTRA<br>MARS <span class="os">OS</span></h1>
+      <p class="lead">Операционная система на Fedora и KDE Plasma. Тёмная и красивая, приложения и обновления —
+        одной кнопкой, а если после обновления что-то сломалось, прошлая версия возвращается одной перезагрузкой.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#install">Установить</a>
+        <a class="btn btn-glass" href="#screens">Посмотреть</a>
+      </div>
+      <div class="chips" aria-label="Основа системы">
+        <span class="chip">bootc · атомарные обновления</span>
+        <span class="chip">Flathub</span>
+        <span class="chip">Wayland</span>
+      </div>
+    </div>
+    <div class="hero-logo"><img src="img/logo.jpg" width="1200" height="1200" alt="Логотип AstraMars OS: точечные буквы AM над чёрными дюнами и надпись 0.1"></div>
+  </div>
+</header>
+
+<div class="facts wrap" aria-label="Коротко">
+  <div class="fact"><b>1</b><span>кнопка, чтобы обновить систему и все приложения</span></div>
+  <div class="fact"><b>3348</b><span>приложений Flathub в магазине, поиск по-русски</span></div>
+  <div class="fact"><b>12</b><span>быстрых действий: очистка, звук, сеть, проверка интернета</span></div>
+  <div class="fact"><b>0</b><span>команд в терминале для обычной работы</span></div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Возможности</span>
+      <h2>Всё, что обычно делают командами, — кнопками</h2>
+      <p class="lead">AstraMars собрана из Fedora Kinoite и своих приложений. Всё подписано по-русски и оформлено в одном стиле.</p>
+    </div>
+    <div class="grid">
+      <article class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M4 7h16l-1.5 11a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg></div>
+        <h3>AstraMars Store</h3>
+        <p>Telegram, Steam, Discord, VLC, OBS и тысячи других. «Установить» — и видно, сколько процентов скачалось и с какой скоростью.</p>
+        <span class="tag">Flathub · без пароля</span>
+      </article>
+      <article class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.6 4.5L20 16"/><path d="M20 20v-4h-4"/></svg></div>
+        <h3>Обновления одной кнопкой</h3>
+        <p>Новая версия системы скачивается в фоне и включается после перезагрузки. Приложения обновляются там же.</p>
+        <span class="tag">bootc upgrade</span>
+      </article>
+      <article class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M9 14l-4-4 4-4"/><path d="M5 10h9a5 5 0 0 1 0 10h-3"/></svg></div>
+        <h3>Откат, если что-то не так</h3>
+        <p>Система обновляется целиком, как телефон. Не понравилась новая версия — выберите прошлую при загрузке.</p>
+        <span class="tag">bootc rollback</span>
+      </article>
+      <article class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6l1-7z"/></svg></div>
+        <h3>Быстрые действия</h3>
+        <p>Очистить систему, починить звук, перезапустить сеть, проверить скорость интернета. И свои цепочки команд.</p>
+        <span class="tag">12 готовых</span>
+      </article>
+      <article class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg></div>
+        <h3>Ygolek VPN</h3>
+        <p>Встроенный клиент на sing-box: VLESS, Reality, VMess, Trojan, Shadowsocks, Hysteria2, TUIC. Вход в аккаунт через Telegram.</p>
+        <span class="tag">режим VPN и прокси</span>
+      </article>
+      <article class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.6 2.4 3.8 5.4 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.4-3.8-8.5S9.4 5.9 12 3.5z"/></svg></div>
+        <h3>Прокси сам находится</h3>
+        <p>Запустили Happ или другой клиент в режиме прокси — система сама направит через него обновления, магазин и браузер.</p>
+        <span class="tag">astramars-proxy</span>
+      </article>
+      <article class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg></div>
+        <h3>Экран входа в точках</h3>
+        <p>Часы как на матричном дисплее, дата сверху, поле пароля на стеклянной подложке. Такой же экран блокировки.</p>
+        <span class="tag">Plasma Login Manager</span>
+      </article>
+      <article class="card">
+        <div class="ico"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></div>
+        <h3>Стеклянное меню</h3>
+        <p>Меню приложений сеткой, кнопки питания значками, всплывающие окна — чёрное стекло со скруглениями.</p>
+        <span class="tag">стиль Plasma AstraMars</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="screens" style="padding-top: 0">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Как выглядит</span>
+      <h2>Чёрный, белый и одна красная точка</h2>
+    </div>
+
+    <div class="show">
+      <div class="show-text">
+        <h3>Экран входа</h3>
+        <p class="lead">Дата сверху, под ней время круглыми точками. Двоеточие мягко мигает, а поле пароля лежит на стекле.</p>
+      </div>
+      <figure class="shot" style="margin:0"><img src="img/login.jpg" width="1600" height="900" alt="Экран входа: дата, крупные точечные часы, аватар и поле пароля на стеклянной подложке" loading="lazy"></figure>
+    </div>
+
+    <div class="show flip">
+      <div class="show-text">
+        <h3>AstraMars Store</h3>
+        <p class="lead">Подборки по разделам и поиск по всему Flathub.</p>
+        <ul>
+          <li>«Установить» → проценты и скорость → «Открыть»</li>
+          <li>Раздел «Обновления»: система и приложения, «Обновить всё»</li>
+          <li>Удаление — при наведении на установленное</li>
+        </ul>
+      </div>
+      <figure class="shot" style="margin:0"><img src="img/store.jpg" width="1180" height="780" alt="AstraMars Store: сетка приложений, у OBS Studio идёт установка 50%" loading="lazy"></figure>
+    </div>
+
+    <div class="show">
+      <div class="show-text">
+        <h3>Быстрые действия</h3>
+        <p class="lead">Нажали плитку — система сама проходит все шаги. Видно, какой шаг идёт, итог и подробный журнал.</p>
+        <ul>
+          <li>«Очистить систему» покажет, сколько места освободилось</li>
+          <li>Действия с правами администратора отмечены замком</li>
+          <li>Свои действия: название и команды по одной в строке</li>
+        </ul>
+      </div>
+      <figure class="shot" style="margin:0"><img src="img/actions.jpg" width="1120" height="800" alt="Быстрые действия: плитки, у трёх идёт выполнение по шагам" loading="lazy"></figure>
+    </div>
+
+    <div class="show flip">
+      <div class="show-text">
+        <h3>Меню приложений</h3>
+        <p class="lead">Стекло с размытием, крупные иконки сеткой, кнопки питания значками. Кнопка меню на панели — кольцо из точек.</p>
+      </div>
+      <figure class="shot" style="margin:0"><img src="img/menu.jpg" width="1280" height="800" alt="Меню приложений: стеклянное окно с сеткой иконок поверх обоев с Марсом" loading="lazy"></figure>
+    </div>
+
+    <div class="show">
+      <div class="show-text">
+        <h3>Ygolek VPN</h3>
+        <p class="lead">Уголёк разгорается синим, когда VPN включён. Подписка подтягивается из аккаунта после входа через Telegram.</p>
+      </div>
+      <figure class="shot narrow" style="margin:0"><img src="img/vpn.jpg" width="420" height="800" alt="Ygolek VPN: кнопка-уголёк светится синим, ниже список серверов" loading="lazy"></figure>
+    </div>
+
+    <div class="show flip">
+      <div class="show-text">
+        <h3>Заставка загрузки</h3>
+        <p class="lead">Логотип, надпись точками и кольцо с бегущим огоньком вместо стандартной заставки Fedora.</p>
+      </div>
+      <figure class="shot" style="margin:0"><img src="img/splash.jpg" width="1600" height="900" alt="Заставка загрузки: логотип 0.1, надпись ASTRAMARS OS точками и кольцо из точек" loading="lazy"></figure>
+    </div>
+  </div>
+</section>
+
+<section id="install" style="border-top: 1px solid var(--line)">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Установка</span>
+      <h2>Пять шагов, рядом с Windows</h2>
+      <p class="lead">Сначала ставится обычная Fedora Kinoite, потом она одной командой превращается в AstraMars. Дальше всё обновляется кнопкой в магазине.</p>
+    </div>
+    <ol class="steps">
+      <li>
+        <div>
+          <h3>Скачайте Fedora Kinoite 45</h3>
+          <p>Файл ISO «OSTree» для Intel и AMD x86_64 с <a href="https://fedoraproject.org/atomic-desktops/kinoite/">fedoraproject.org</a>, около 3,4 ГБ.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Запишите на флешку</h3>
+          <p>Флешка от 8 ГБ и программа <a href="https://fedoraproject.org/workstation/download">Fedora Media Writer</a> или Rufus. Всё, что было на флешке, сотрётся.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Установите рядом с Windows</h3>
+          <p>В Windows освободите 50 ГБ («Управление дисками» → «Сжать том»). В установщике выберите разметку «Автоматически» —
+            он займёт свободное место и не тронет Windows.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Переключитесь на AstraMars</h3>
+          <p>После первого входа откройте Konsole и выполните:</p>
+          <div class="cmd"><code id="cmd-switch">sudo bootc switch ghcr.io/artem-ne-arteem/astramars-os:latest</code><button type="button" data-copy="cmd-switch">Скопировать</button></div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <h3>Перезагрузитесь</h3>
+          <div class="cmd"><code id="cmd-reboot">systemctl reboot</code><button type="button" data-copy="cmd-reboot">Скопировать</button></div>
+          <p style="margin-top:14px">Готово. Дальше обновления — в AstraMars Store, раздел «Обновления».</p>
+        </div>
+      </li>
+    </ol>
+    <p class="note">Если новая версия чем-то не понравилась — выберите предыдущий пункт в меню загрузки или выполните <code>sudo bootc rollback</code>.</p>
+  </div>
+</section>
+
+<section id="faq" style="border-top: 1px solid var(--line)">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Вопросы</span>
+      <h2>Частые вопросы</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>Это Fedora?</summary>
+        <p>В основе — Fedora Kinoite (атомарная Fedora с KDE Plasma). Сверху — своё оформление и приложения AstraMars. AstraMars — независимый проект, а не официальная Fedora.</p>
+      </details>
+      <details>
+        <summary>Сколько стоит?</summary>
+        <p>Бесплатно. Код открыт на GitHub, образ системы собирается автоматически каждый день.</p>
+      </details>
+      <details>
+        <summary>Что будет, если обновление что-то сломает?</summary>
+        <p>Система обновляется целиком: новая версия ставится рядом со старой. При загрузке можно выбрать прошлую версию, и всё вернётся как было. Ваши файлы при этом не затрагиваются.</p>
+      </details>
+      <details>
+        <summary>Откуда берутся приложения?</summary>
+        <p>Из Flathub — крупнейшего каталога приложений для Linux. В AstraMars Store они ставятся одной кнопкой, а в списке видны описания по-русски.</p>
+      </details>
+      <details>
+        <summary>Можно ли играть?</summary>
+        <p>Да: Steam, Heroic (Epic и GOG), Lutris, Bottles и Prism Launcher для Minecraft есть в разделе «Игры». Кодеки для видео и музыки уже встроены.</p>
+      </details>
+      <details>
+        <summary>Безопасно ли ставить рядом с Windows?</summary>
+        <p>Да, если выбрать в установщике автоматическую разметку в свободное место. При включении компьютера появится меню выбора системы. Перед установкой сохраните важные файлы — так стоит делать всегда.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <a class="brand dots" href="#top"><img src="img/favicon.svg" alt="" width="22" height="22">ASTRAMARS OS</a>
+      <p class="small">Названа в честь кошки Астры и кота Марсика. Независимый проект на основе Fedora Kinoite; не связан с Fedora Project. Fedora — товарный знак Red Hat, Inc.</p>
+    </div>
+    <nav aria-label="Ссылки">
+      <a href="https://github.com/artem-ne-arteem/astramars-os">GitHub</a>
+      <a href="https://github.com/artem-ne-arteem/astramars-os/actions">Сборки</a>
+      <a href="#install">Установка</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+// Кнопки «Скопировать»: если буфер обмена недоступен — выделяем текст команды
+document.querySelectorAll("[data-copy]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var code = document.getElementById(btn.dataset.copy);
+    function done(label) { btn.textContent = label; setTimeout(function () { btn.textContent = "Скопировать"; }, 1600); }
+    function fallback() {
+      var range = document.createRange(); range.selectNodeContents(code);
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      done("Выделено");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code.textContent).then(function () { done("Скопировано"); }, fallback);
+    } else {
+      fallback();
+    }
+  });
+});
+</script>
+</body>
+</html>
