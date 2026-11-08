@@ -11,7 +11,7 @@ jobs:
   iso:
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write   # выложить ISO в релиз iso-latest (его скачивает установщик для Windows)
       packages: read
     steps:
       - name: Освободить место на диске
@@ -43,6 +43,19 @@ jobs:
             --use-librepo=True \
             "${{ steps.image.outputs.ref }}"
           sudo mv output/bootiso/install.iso "output/AstraMars-OS-$(date -u +%Y%m%d).iso"
+
+      - name: Выложить ISO в релиз iso-latest (частями по 1,9 ГБ — ограничение GitHub 2 ГБ на файл)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd output
+          ISO="$(ls *.iso)"
+          sudo chown "$(id -u)" "$ISO"
+          sha256sum "$ISO" | awk '{print $1}' > "$ISO.sha256"
+          split -b 1900M -d -a 2 "$ISO" "$ISO.part"
+          ls -la
+          gh release delete iso-latest --yes --cleanup-tag -R "$GITHUB_REPOSITORY" || true
+          gh release create iso-latest -R "$GITHUB_REPOSITORY" --title "AstraMars OS — установочный образ"             --notes "Установочный ISO AstraMars OS ($(date -u +%Y-%m-%d)). Скачивается установщиком для Windows (AstraMars-Setup) и собирается из частей. Вручную: скачайте все части .partNN и склейте: Windows — copy /b ${ISO}.part00+${ISO}.part01+… ${ISO}; Linux — cat ${ISO}.part* > ${ISO}. Контрольная сумма — в файле .sha256."             --latest=false "$ISO.sha256" "$ISO".part*
 
       - name: Выложить ISO
         uses: actions/upload-artifact@v4

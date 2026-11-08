@@ -18,6 +18,11 @@ CURATED = [
         "io.github.ungoogled_software.ungoogled_chromium", "org.qbittorrent.qBittorrent",
         "com.transmissionbt.Transmission",
     ]),
+    ("russia", "Наше", [
+        "ru.yandex.Browser", "org.telegram.desktop", "com.VK.Messenger", "ru.max.MAX",
+        "space.rirusha.Cassette", "ru.linux_gaming.PortProton", "org.onlyoffice.desktopeditors",
+        "ru.toxblh.KeeneticManager",
+    ]),
     ("chat", "Общение", [
         "org.telegram.desktop", "com.discordapp.Discord", "us.zoom.Zoom",
         "org.mozilla.thunderbird", "im.riot.Riot", "com.viber.Viber",

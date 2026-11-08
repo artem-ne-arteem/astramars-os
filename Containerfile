@@ -12,6 +12,8 @@ FROM scratch AS ctx
 COPY build_files /
 
 FROM ${BASE_IMAGE}:${FEDORA_VERSION}
+# standard — основной образ; nvidia — с драйвером NVIDIA (BASE_IMAGE=ghcr.io/ublue-os/kinoite-nvidia)
+ARG VARIANT=standard
 
 # Файлы системы: темы, обои, логотипы, настройки KDE по умолчанию
 COPY system_files /

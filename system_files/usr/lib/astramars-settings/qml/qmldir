@@ -1,0 +1,10 @@
+singleton Theme 1.0 Theme.qml
+Card 1.0 Card.qml
+Btn 1.0 Btn.qml
+Toggle 1.0 Toggle.qml
+SettingRow 1.0 SettingRow.qml
+Seg 1.0 Seg.qml
+StatusDot 1.0 StatusDot.qml
+DotProgress 1.0 DotProgress.qml
+Page 1.0 Page.qml
+ChatView 1.0 ChatView.qml

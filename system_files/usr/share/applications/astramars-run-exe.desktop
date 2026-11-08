@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Запуск программ Windows
+Name[en]=Run Windows program
+Comment=Открыть программу для Windows (.exe, .msi) через Bottles
+Exec=astramars-run-exe %f
+Icon=astramars-settings
+Terminal=false
+NoDisplay=true
+MimeType=application/x-ms-dos-executable;application/x-msdownload;application/x-msi;application/x-ms-installer;application/vnd.microsoft.portable-executable;application/x-wine-extension-msp;application/x-dosexec;

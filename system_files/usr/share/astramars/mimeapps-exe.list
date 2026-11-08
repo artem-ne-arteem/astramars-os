@@ -1,0 +1,8 @@
+# AstraMars: программы для Windows открываются двойным щелчком через Bottles
+[Default Applications]
+application/x-ms-dos-executable=astramars-run-exe.desktop
+application/x-msdownload=astramars-run-exe.desktop
+application/x-msi=astramars-run-exe.desktop
+application/x-ms-installer=astramars-run-exe.desktop
+application/vnd.microsoft.portable-executable=astramars-run-exe.desktop
+application/x-dosexec=astramars-run-exe.desktop

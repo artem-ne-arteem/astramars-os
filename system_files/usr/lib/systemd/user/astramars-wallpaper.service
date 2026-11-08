@@ -1,0 +1,6 @@
+[Unit]
+Description=AstraMars: обои по времени суток
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/astramars-wallpaper

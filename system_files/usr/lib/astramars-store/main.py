@@ -6,7 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from PySide6.QtCore import QTimer, QUrl  # noqa: E402
+from PySide6.QtCore import Q_ARG, QMetaObject, QTimer, QUrl  # noqa: E402
 from PySide6.QtGui import QGuiApplication, QIcon  # noqa: E402
 from PySide6.QtNetwork import QLocalServer, QLocalSocket  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
@@ -18,9 +18,21 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SOCKET_NAME = f"astramars-store-{os.environ.get('USER') or os.environ.get('USERNAME') or 'user'}"
 
 
+def accent():
+    """Акцентный цвет, выбранный в Настройках AstraMars."""
+    import json
+    path = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "astramars", "theme.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get("accent", "#ff3b30")
+    except (OSError, ValueError):
+        return "#ff3b30"
+
+
 def main():
     check_only = "--check" in sys.argv
     screenshot = sys.argv[sys.argv.index("--screenshot") + 1] if "--screenshot" in sys.argv else None
+    arg = sys.argv[sys.argv.index("--search") + 1] if "--search" in sys.argv[:-1] else ""
 
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
@@ -37,7 +49,7 @@ def main():
     probe = QLocalSocket()
     probe.connectToServer(SOCKET_NAME)
     if not check_only and probe.waitForConnected(300):
-        probe.write(b"show")
+        probe.write(("search:" + (arg or "")).encode() if arg else b"show")
         probe.waitForBytesWritten(300)
         return 0
     QLocalServer.removeServer(SOCKET_NAME)
@@ -54,6 +66,7 @@ def main():
             print("QML:", w.toString(), file=sys.stderr)
     engine.warnings.connect(on_warnings)
     engine.rootContext().setContextProperty("backend", backend)
+    engine.rootContext().setContextProperty("astraAccent", accent())
     engine.load(QUrl.fromLocalFile(os.path.join(HERE, "qml", "Main.qml")))
     if not engine.rootObjects():
         return 1
@@ -63,7 +76,15 @@ def main():
         window.show()
         window.raise_()
         window.requestActivate()
-    server.newConnection.connect(lambda: (server.nextPendingConnection(), show_window()))
+
+    def on_connection():
+        sock = server.nextPendingConnection()
+        sock.waitForReadyRead(300)
+        data = bytes(sock.readAll()).decode(errors="replace")
+        show_window()
+        if data.startswith("search:"):
+            QMetaObject.invokeMethod(window, "setSearch", Q_ARG("QVariant", data.split(":", 1)[1]))
+    server.newConnection.connect(on_connection)
 
     backend.start()
     if check_only:
@@ -76,6 +97,9 @@ def main():
         return 1 if warnings else 0
 
     show_window()
+    if arg:
+        data = "search:" + arg
+        QTimer.singleShot(400, lambda: QMetaObject.invokeMethod(window, "setSearch", Q_ARG("QVariant", data.split(":", 1)[1])))
     if screenshot:
         def grab():
             window.grabWindow().save(screenshot)

@@ -18,9 +18,21 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SOCKET_NAME = f"astramars-actions-{os.environ.get('USER') or os.environ.get('USERNAME') or 'user'}"
 
 
+def accent():
+    """Акцентный цвет, выбранный в Настройках AstraMars."""
+    import json
+    path = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "astramars", "theme.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get("accent", "#ff3b30")
+    except (OSError, ValueError):
+        return "#ff3b30"
+
+
 def main():
     check_only = "--check" in sys.argv
     screenshot = sys.argv[sys.argv.index("--screenshot") + 1] if "--screenshot" in sys.argv else None
+    arg = sys.argv[sys.argv.index("--run") + 1] if "--run" in sys.argv[:-1] else ""
 
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication(sys.argv)
@@ -36,7 +48,7 @@ def main():
     probe = QLocalSocket()
     probe.connectToServer(SOCKET_NAME)
     if not check_only and probe.waitForConnected(300):
-        probe.write(b"show")
+        probe.write(("run:" + (arg or "")).encode() if arg else b"show")
         probe.waitForBytesWritten(300)
         return 0
     QLocalServer.removeServer(SOCKET_NAME)
@@ -53,6 +65,7 @@ def main():
             print("QML:", w.toString(), file=sys.stderr)
     engine.warnings.connect(on_warnings)
     engine.rootContext().setContextProperty("backend", backend)
+    engine.rootContext().setContextProperty("astraAccent", accent())
     engine.load(QUrl.fromLocalFile(os.path.join(HERE, "qml", "Main.qml")))
     if not engine.rootObjects():
         return 1
@@ -62,7 +75,15 @@ def main():
         window.show()
         window.raise_()
         window.requestActivate()
-    server.newConnection.connect(lambda: (server.nextPendingConnection(), show_window()))
+
+    def on_connection():
+        sock = server.nextPendingConnection()
+        sock.waitForReadyRead(300)
+        data = bytes(sock.readAll()).decode(errors="replace")
+        show_window()
+        if data.startswith("run:"):
+            backend.run(data.split(":", 1)[1])
+    server.newConnection.connect(on_connection)
 
     if check_only:
         # Проверка при сборке: окно, все плитки, запуск действия и редактор — без предупреждений QML
@@ -77,6 +98,9 @@ def main():
         return 1 if warnings else 0
 
     show_window()
+    if arg:
+        data = "run:" + arg
+        QTimer.singleShot(400, lambda: backend.run(data.split(":", 1)[1]))
     if screenshot:
         for item in filter(None, os.environ.get("ASTRAMARS_ACTIONS_SHOT_RUN", "").split(",")):
             QTimer.singleShot(400, lambda i=item: backend.run(i))

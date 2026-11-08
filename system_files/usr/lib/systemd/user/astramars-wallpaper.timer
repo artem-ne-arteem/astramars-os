@@ -1,0 +1,10 @@
+[Unit]
+Description=AstraMars: смена обоев по времени суток
+
+[Timer]
+OnStartupSec=20s
+OnCalendar=*:0/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

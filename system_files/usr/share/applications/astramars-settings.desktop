@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Настройки AstraMars
+Name[en]=AstraMars Settings
+GenericName=Настройки системы
+Comment=Оформление, сеть и VPN, обновления, переезд с Windows, игры, телефон, батарея и приватность
+Exec=astramars-settings
+Icon=astramars-settings
+Terminal=false
+Categories=Settings;System;
+Keywords=settings;system;настройки;параметры;оформление;обновления;windows;игры;телефон;батарея;dns;
+StartupWMClass=astramars-settings
+Actions=assistant;
+
+[Desktop Action assistant]
+Name=Помощник
+Exec=astramars-assistant

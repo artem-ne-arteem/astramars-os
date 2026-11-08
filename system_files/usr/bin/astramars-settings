@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+# AstraMars: settings
+exec /usr/bin/python3 /usr/lib/astramars-settings/main.py "$@"

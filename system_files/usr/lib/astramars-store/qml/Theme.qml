@@ -11,7 +11,7 @@ QtObject {
     readonly property color fg: "#f2f2f2"
     readonly property color muted: "#8c8c8c"
     readonly property color faint: "#555555"
-    readonly property color accent: "#ff3b30"
+    readonly property color accent: typeof astraAccent !== "undefined" && astraAccent ? astraAccent : "#ff3b30"
     readonly property color glass: Qt.rgba(1, 1, 1, 0.06)
 
     readonly property string dots: "Doto"

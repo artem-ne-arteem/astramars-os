@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+# AstraMars: обои по времени суток (утро 6–11, день 11–17, вечер 17–21, ночь 21–6).
+# Включается в Настройках AstraMars → Оформление; запускает пользовательский таймер.
+set -u
+DIR=/usr/share/wallpapers/AstraMarsDaytime
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/astramars/wallpaper"
+h=$((10#$(date +%H)))
+if   [ "$h" -ge 6 ]  && [ "$h" -lt 11 ]; then part=morning
+elif [ "$h" -ge 11 ] && [ "$h" -lt 17 ]; then part=day
+elif [ "$h" -ge 17 ] && [ "$h" -lt 21 ]; then part=evening
+else part=night
+fi
+[ "${1:-}" = "--force" ] || { [ "$(cat "$STATE" 2>/dev/null)" = "$part" ] && exit 0; }
+plasma-apply-wallpaperimage "$DIR/$part.jpg" >/dev/null 2>&1 || exit 0
+mkdir -p "$(dirname "$STATE")"
+echo "$part" > "$STATE"

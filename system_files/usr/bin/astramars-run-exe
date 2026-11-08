@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+# AstraMars: run-exe
+exec /usr/bin/python3 /usr/lib/astramars-settings/main.py --run-exe "$@"

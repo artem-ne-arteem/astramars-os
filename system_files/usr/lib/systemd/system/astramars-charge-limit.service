@@ -1,0 +1,10 @@
+[Unit]
+Description=AstraMars OS: предел заряда батареи
+ConditionPathExists=/etc/astramars/charge-limit
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/astramars-settings-helper charge-restore
+
+[Install]
+WantedBy=multi-user.target

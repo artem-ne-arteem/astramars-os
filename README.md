@@ -32,7 +32,16 @@
 
 ## Как поставить на свой ПК
 
-**Вариант А — через Fedora Kinoite (рекомендуется для первого раза):**
+**Проще всего — установщик для Windows.** В Windows откройте «Терминал» (Win + X) и вставьте:
+```powershell
+irm https://artem-ne-arteem.github.io/astramars-os/install.ps1 | iex
+```
+или скачайте [AstraMars-Setup.cmd](https://artem-ne-arteem.github.io/astramars-os/AstraMars-Setup.cmd).
+Установщик (`site/setup.ps1`) проверит UEFI, BitLocker и место, сожмёт раздел C: (или возьмёт уже освобождённое место),
+скачает ISO из релиза `iso-latest` (частями, с проверкой SHA-256) и запишет флешку. Дальше — загрузка с флешки и установка
+в свободное место. ISO в релиз выкладывает «Сборка установочного ISO» (Actions → Run workflow).
+
+**Вариант А — через Fedora Kinoite:**
 1. Установите обычную Fedora Kinoite второй системой: https://fedoraproject.org/atomic-desktops/kinoite/
 2. В терминале выполните:
    ```bash
@@ -47,6 +56,36 @@
 **Вариант Б — через свой ISO:**
 Actions → «Сборка установочного ISO» → **Run workflow**. Когда закончится,
 скачайте ISO внизу страницы запуска и запишите на флешку (Fedora Media Writer или Rufus).
+
+## Настройки AstraMars
+
+<img src="docs/astramars-settings.png" width="560" alt="Настройки AstraMars">
+
+Свой центр настроек (`astramars-settings`, в меню — «Настройки AstraMars»), десять разделов:
+
+| Раздел | Что внутри |
+|---|---|
+| Главная | Логотип, сведения о компьютере, место на диске точками, плитки состояния |
+| Оформление | 7 цветов акцента (во всей системе и в наших приложениях), тёмная/светлая тема, обои по времени суток (`/usr/libexec/astramars-wallpaper`, пользовательский таймер), точечные часы на рабочий стол (`org.astramars.dotclock`) |
+| Сеть и VPN | Проверка, что открывается (YouTube, Discord, Госуслуги, банки…), DNS для всей системы (Cloudflare, Google, Quad9, AdGuard, Яндекс; глобальный DNS NetworkManager + DNS-over-TLS, если сервер умеет), Ygolek VPN |
+| Система | Обновление и перезагрузка, откат (`bootc rollback`), «Машина времени» — ежедневные снимки `/var/home` (btrfs, только чтение, 7 последних, `astramars-snapshot.timer`) |
+| Переезд с Windows | Находит раздел Windows (подключает только для чтения), копирует Рабочий стол, Документы, Изображения, Музыку, Видео, Загрузки в подпапки «Из Windows», закладки Chrome/Edge/Яндекс/Opera/Brave/Firefox — в один HTML для импорта, обои; диск Windows при каждом входе |
+| Игры | Steam, Heroic, PortProton, ProtonUp-Qt + MangoHud одной кнопкой, игровой режим, переход на образ `astramars-os-nvidia` и ключ драйвера для Secure Boot |
+| Телефон | KDE Connect: устройства, подключение, отправка файлов, «найти телефон», QR-код на приложение |
+| Помощник | ИИ-помощник на Claude (`claude-opus-5-5`, библиотека `anthropic` в `/usr/lib/astramars-settings/vendor`): объясняет и предлагает кнопки — Быстрое действие, раздел настроек, поиск в Магазине. Сам ничего не запускает. Свой ключ Anthropic API, хранится в `~/.config/astramars/assistant.json` (0600); без ключа — подсказки по ключевым словам. Отдельное окно — Meta + A (`astramars-assistant`) |
+| Ноутбук | Заряд и здоровье батареи, предел заряда 60/80/90% (`charge_control_end_threshold`, сохраняется после перезагрузки), профили питания, яркость |
+| Приватность | Кто сейчас использует микрофон и камеру; телеметрии нет (`rpm-ostree-countme.timer` выключен) |
+
+Действия с правами администратора выполняет `/usr/libexec/astramars-settings-helper` с фиксированным набором команд;
+администраторам он разрешён без пароля (polkit `org.astramars.settings.helper`).
+Программы `.exe`/`.msi` открываются двойным щелчком (`astramars-run-exe`): Bottles ставится из Flathub при первом запуске,
+все программы — в одной «бутылке» AstraMars; для заведомо неработающих (античит, Adobe, новый Office) окно говорит об этом
+и предлагает замену из Магазина. В Магазине — раздел «Наше»: Яндекс Браузер, Telegram, VK Мессенджер, MAX, Кассета
+(Яндекс Музыка), PortProton, ONLYOFFICE, Keenetic Manager.
+
+В «О системе» KDE — логотип AstraMars (`/etc/xdg/kcm-about-distrorc`). Сборка проверяет всё это
+`build_files/settings_selftest.py` (переезд с Windows на поддельном диске, помощник против подставного сервера API)
+и `astramars-settings --check` (все разделы и окна без ошибок QML).
 
 ## Экран входа и блокировки
 

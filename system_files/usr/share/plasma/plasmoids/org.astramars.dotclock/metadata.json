@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [{"Name": "AstraMars OS"}],
+        "Category": "Date and Time",
+        "Description": "Big dot-matrix clock in the AstraMars style",
+        "Description[ru]": "Крупные точечные часы в стиле AstraMars",
+        "Icon": "astramars-logo",
+        "Id": "org.astramars.dotclock",
+        "License": "GPL-2.0-or-later",
+        "Name": "AstraMars Dot Clock",
+        "Name[ru]": "Точечные часы AstraMars",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

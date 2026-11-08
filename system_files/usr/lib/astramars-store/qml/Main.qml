@@ -5,6 +5,8 @@ import "."
 
 ApplicationWindow {
     id: win
+    // Поиск снаружи: astramars-store --search «запрос» (из Настроек, помощника, окна .exe)
+    function setSearch(text) { search.text = text; search.forceActiveFocus() }
     width: 1180
     height: 780
     minimumWidth: 760

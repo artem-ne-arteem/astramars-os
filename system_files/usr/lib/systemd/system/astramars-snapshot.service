@@ -1,0 +1,7 @@
+[Unit]
+Description=AstraMars OS: снимок домашних папок («Машина времени»)
+ConditionPathIsDirectory=/var/home
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/astramars-settings-helper snapshot create auto

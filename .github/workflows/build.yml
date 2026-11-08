@@ -9,20 +9,36 @@ on:
     - cron: "0 4 * * *"   # каждый день — чтобы подтягивать обновления Fedora
   workflow_dispatch:
 
-env:
-  IMAGE_NAME: astramars-os
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
+    name: Образ ${{ matrix.image }}
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Основной образ
+          - image: astramars-os
+            base: ghcr.io/ublue-os/kinoite-main
+            variant: standard
+          # С фирменным драйвером NVIDIA (переход — в Настройках → Игры)
+          - image: astramars-os-nvidia
+            base: ghcr.io/ublue-os/kinoite-nvidia
+            variant: nvidia
     permissions:
       contents: read
       packages: write
     steps:
+      - name: Освободить место на диске (образ NVIDIA больше)
+        if: matrix.variant == 'nvidia'
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+
       - name: Получить код
         uses: actions/checkout@v5
 
@@ -37,9 +53,12 @@ jobs:
         uses: redhat-actions/buildah-build@v3
         with:
           containerfiles: ./Containerfile
-          image: ${{ env.IMAGE_NAME }}
+          image: ${{ matrix.image }}
           tags: latest ${{ steps.meta.outputs.date }}
           oci: false
+          build-args: |
+            BASE_IMAGE=${{ matrix.base }}
+            VARIANT=${{ matrix.variant }}
 
       - name: Опубликовать в GitHub Container Registry
         if: github.event_name != 'pull_request'

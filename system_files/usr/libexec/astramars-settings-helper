@@ -1,0 +1,220 @@
+#!/usr/bin/python3
+"""Действия «Настроек AstraMars», которым нужны права администратора.
+
+Запускается через pkexec (правило polkit разрешает администраторам без пароля).
+Принимает только фиксированный набор команд с проверкой аргументов:
+
+  dns <auto|cloudflare|google|quad9|adguard|yandex>   DNS для всей системы
+  snapshot create [auto]            снимок домашних папок (только чтение)
+  snapshot delete <имя>             удалить снимок
+  snapshot timer <on|off>           ежедневные снимки
+  charge-limit <50..100>            не заряжать батарею выше N% (100 — без ограничения)
+  rollback                          вернуть предыдущую версию системы (после перезагрузки)
+  image <standard|nvidia>           перейти на образ с драйверами NVIDIA или обратно
+  mok-enroll                        подготовить ключ драйверов NVIDIA для Secure Boot
+"""
+
+import datetime as dt
+import glob
+import json
+import os
+import re
+import subprocess
+import sys
+
+SNAP_ROOT = "/var/home/.snapshots"
+KEEP_AUTO = 7
+IMAGES = {
+    "standard": "ghcr.io/artem-ne-arteem/astramars-os:latest",
+    "nvidia": "ghcr.io/artem-ne-arteem/astramars-os-nvidia:latest",
+}
+# Серверы: обычные адреса и имя для зашифрованного DNS (DNS-over-TLS)
+DNS = {
+    "cloudflare": ["1.1.1.1#cloudflare-dns.com", "1.0.0.1#cloudflare-dns.com"],
+    "google": ["8.8.8.8#dns.google", "8.8.4.4#dns.google"],
+    "quad9": ["9.9.9.9#dns.quad9.net", "149.112.112.112#dns.quad9.net"],
+    "adguard": ["94.140.14.14#dns.adguard-dns.com", "94.140.15.15#dns.adguard-dns.com"],
+    "yandex": ["77.88.8.8#common.dot.dns.yandex.net", "77.88.8.1#common.dot.dns.yandex.net"],
+}
+NM_DNS = "/etc/NetworkManager/conf.d/50-astramars-dns.conf"
+RESOLVED_DNS = "/etc/systemd/resolved.conf.d/50-astramars-dns.conf"
+CHARGE_CONF = "/etc/astramars/charge-limit"
+
+
+def run(*args, check=True):
+    p = subprocess.run(args, capture_output=True, text=True)
+    if check and p.returncode != 0:
+        msg = (p.stderr or p.stdout).strip().splitlines()
+        raise SystemExit(f"{args[0]}: {msg[-1] if msg else 'ошибка'}")
+    return p
+
+
+def write(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+# --- DNS ----------------------------------------------------------------------
+
+def dns(preset):
+    if preset == "auto":
+        for path in (NM_DNS, RESOLVED_DNS):
+            if os.path.exists(path):
+                os.remove(path)
+    elif preset in DNS:
+        servers = DNS[preset]
+        # Глобальный DNS NetworkManager заменяет DNS от роутера и провайдера для всех сетей
+        write(NM_DNS, "# AstraMars: DNS выбран в Настройках AstraMars\n"
+                      "[global-dns-domain-*]\nservers=" + ",".join(servers) + "\n")
+        # Шифровать запросы, если сервер это умеет (иначе — обычный DNS)
+        write(RESOLVED_DNS, "# AstraMars: зашифрованный DNS, если сервер поддерживает\n"
+                            "[Resolve]\nDNSOverTLS=opportunistic\n")
+    else:
+        raise SystemExit("неизвестный DNS")
+    run("systemctl", "try-restart", "systemd-resolved.service", check=False)
+    run("systemctl", "reload-or-restart", "NetworkManager.service", check=False)
+    print("ok")
+
+
+# --- Снимки домашних папок («Машина времени») -------------------------------
+
+def _home_is_subvolume():
+    return run("btrfs", "subvolume", "show", "/var/home", check=False).returncode == 0
+
+
+def snapshot_create(kind):
+    if not _home_is_subvolume():
+        raise SystemExit("домашние папки не на отдельном разделе btrfs — снимки недоступны")
+    os.makedirs(SNAP_ROOT, exist_ok=True)
+    os.chmod(SNAP_ROOT, 0o755)   # внутрь каждой папки пользователя пускают её обычные права
+    name = dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ("_auto" if kind == "auto" else "")
+    run("btrfs", "subvolume", "snapshot", "-r", "/var/home", os.path.join(SNAP_ROOT, name))
+    if kind == "auto":
+        autos = sorted(p for p in glob.glob(os.path.join(SNAP_ROOT, "*_auto")))
+        for old in autos[:-KEEP_AUTO]:
+            run("btrfs", "subvolume", "delete", old, check=False)
+    print(name)
+
+
+def snapshot_delete(name):
+    if not re.fullmatch(r"\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d(_auto)?", name):
+        raise SystemExit("неверное имя снимка")
+    path = os.path.join(SNAP_ROOT, name)
+    if not os.path.isdir(path):
+        raise SystemExit("снимок не найден")
+    run("btrfs", "subvolume", "delete", path)
+    print("ok")
+
+
+def snapshot_timer(state):
+    if state not in ("on", "off"):
+        raise SystemExit("on или off")
+    run("systemctl", "enable" if state == "on" else "disable", "--now", "astramars-snapshot.timer")
+    print("ok")
+
+
+# --- Батарея ---------------------------------------------------------------------
+
+def _batteries():
+    return [p for p in glob.glob("/sys/class/power_supply/*")
+            if open(os.path.join(p, "type")).read().strip() == "Battery"]
+
+
+def charge_limit(value, quiet=False):
+    n = int(value)
+    if not 50 <= n <= 100:
+        raise SystemExit("от 50 до 100")
+    done = 0
+    for bat in _batteries():
+        path = os.path.join(bat, "charge_control_end_threshold")
+        if os.path.exists(path):
+            try:
+                with open(path, "w") as f:
+                    f.write(str(n))
+                done += 1
+            except OSError:
+                pass
+    if not quiet and not done:
+        raise SystemExit("этот ноутбук не позволяет ограничить заряд")
+    write(CHARGE_CONF, f"{n}\n")
+    run("systemctl", "enable" if n < 100 else "disable", "astramars-charge-limit.service", check=False)
+    print("ok")
+
+
+def charge_restore():
+    """При загрузке: вернуть сохранённый предел (ядро его забывает)."""
+    try:
+        charge_limit(open(CHARGE_CONF).read().strip(), quiet=True)
+    except (OSError, ValueError):
+        pass
+
+
+# --- Версии системы ---------------------------------------------------------------
+
+def rollback():
+    run("bootc", "rollback")
+    print("ok")
+
+
+def image(kind):
+    if kind not in IMAGES:
+        raise SystemExit("standard или nvidia")
+    # Загрузка долгая — пишем ход в журнал службы, а не ждём здесь
+    run("systemctl", "reset-failed", "astramars-image-switch.service", check=False)
+    run("systemd-run", "--unit=astramars-image-switch",
+        "--property=TimeoutStartSec=2h", "bootc", "switch", IMAGES[kind])
+    print("ok")
+
+
+def image_status():
+    p = run("systemctl", "show", "-p", "ActiveState,Result", "astramars-image-switch.service", check=False)
+    print(json.dumps(dict(l.split("=", 1) for l in p.stdout.split() if "=" in l)))
+
+
+def mok_enroll():
+    """Ключ, которым подписаны драйверы NVIDIA (ublue). Пароль для синего экрана MOK: universalblue."""
+    keys = glob.glob("/etc/pki/akmods/certs/akmods-ublue.der")
+    if not keys:
+        raise SystemExit("ключ появится после перехода на образ NVIDIA и перезагрузки")
+    hash_file = "/run/astramars-mok.hash"
+    p = run("mokutil", "--generate-hash=universalblue")
+    write(hash_file, p.stdout)
+    p = run("mokutil", "--import", keys[0], "--hash-file", hash_file, check=False)
+    os.remove(hash_file)
+    out = (p.stdout + p.stderr).lower()
+    if p.returncode != 0 and "already" not in out:
+        raise SystemExit("mokutil: " + (p.stderr or p.stdout).strip())
+    print("already" if "already" in out else "ok")
+
+
+def main(argv):
+    if os.geteuid() != 0:
+        raise SystemExit("нужны права администратора")
+    cmd = argv[:2]
+    if argv[:1] == ["dns"] and len(argv) == 2:
+        return dns(argv[1])
+    if cmd == ["snapshot", "create"]:
+        return snapshot_create(argv[2] if len(argv) > 2 else "manual")
+    if cmd == ["snapshot", "delete"] and len(argv) == 3:
+        return snapshot_delete(argv[2])
+    if cmd == ["snapshot", "timer"] and len(argv) == 3:
+        return snapshot_timer(argv[2])
+    if argv[:1] == ["charge-limit"] and len(argv) == 2:
+        return charge_limit(argv[1])
+    if argv == ["charge-restore"]:
+        return charge_restore()
+    if argv == ["rollback"]:
+        return rollback()
+    if argv[:1] == ["image"] and len(argv) == 2:
+        return image(argv[1])
+    if argv == ["image-status"]:
+        return image_status()
+    if argv == ["mok-enroll"]:
+        return mok_enroll()
+    print(__doc__)
+    raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

@@ -1,0 +1,6 @@
+[General]
+Name=AstraMars OS
+LogoPath=/usr/share/astramars/branding/about-logo.png
+Website=https://artem-ne-arteem.github.io/astramars-os/
+Variant=Astra & Mars
+UseOSReleaseVersion=true

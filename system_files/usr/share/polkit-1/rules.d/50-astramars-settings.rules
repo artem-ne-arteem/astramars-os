@@ -1,0 +1,15 @@
+// Настройки AstraMars: администраторы меняют DNS, снимки, предел заряда и версию системы без пароля.
+// Разрешён только помощник /usr/libexec/astramars-settings-helper с фиксированным набором команд.
+// Ещё: подключение диска Windows (для переезда) без пароля.
+polkit.addRule(function (action, subject) {
+    if (!subject.local || !subject.active || !subject.isInGroup("wheel")) {
+        return polkit.Result.NOT_HANDLED;
+    }
+    if (action.id === "org.astramars.settings.helper") {
+        return polkit.Result.YES;
+    }
+    if (action.id === "org.freedesktop.udisks2.filesystem-mount-system") {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NOT_HANDLED;
+});

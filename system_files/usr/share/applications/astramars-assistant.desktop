@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Помощник AstraMars
+Name[en]=AstraMars Assistant
+GenericName=ИИ-помощник
+Comment=Спросите что угодно о компьютере: починить звук, освободить место, найти программу
+Exec=astramars-assistant
+Icon=astramars-assistant
+Terminal=false
+Categories=Utility;
+Keywords=assistant;ai;claude;help;помощник;ии;вопрос;справка;
+StartupWMClass=astramars-assistant
+X-KDE-Shortcuts=Meta+A
