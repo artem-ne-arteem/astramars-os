@@ -63,6 +63,13 @@ Actions → «Сборка установочного ISO» → **Run workflow**
 на другой версии сборка её не включает, и экран входа остаётся стандартным. При сборке модуль
 загружается тестом (`build_files/login-theme.sh`), с ошибками образ не соберётся.
 
+## Заставка загрузки
+
+Своя тема Plymouth `astramars`: логотип в центре, под ним «ASTRAMARS OS» точками с красной точкой,
+внизу кольцо из точек с бегущим огоньком — вместо логотипа и надписи Fedora. Картинки делает
+`build_files/make_splash_assets.py` из `logo.png`; тема встраивается в initramfs при сборке,
+и сборка проверяет, что она там есть (`build_files/plymouth.sh`).
+
 ## Ygolek VPN
 
 <img src="docs/ygolek-vpn.png" width="320" align="right" alt="Ygolek VPN">

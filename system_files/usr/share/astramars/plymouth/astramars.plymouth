@@ -1,0 +1,59 @@
+[Plymouth Theme]
+Name=AstraMars
+Description=Логотип AstraMars и кольцо из точек
+ModuleName=two-step
+
+[two-step]
+Font=Inter 12
+TitleFont=Inter Light 28
+ImageDir=/usr/share/plymouth/themes/astramars
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.5
+TitleHorizontalAlignment=.5
+TitleVerticalAlignment=.382
+# Индикатор (кольцо из точек) — внизу
+HorizontalAlignment=.5
+VerticalAlignment=.80
+# Логотип с надписью — в центре
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.42
+Transition=none
+TransitionDuration=0.0
+BackgroundStartColor=0x000000
+BackgroundEndColor=0x000000
+ProgressBarBackgroundColor=0x303030
+ProgressBarForegroundColor=0xf0f0f0
+MessageBelowAnimation=true
+
+[boot-up]
+UseEndAnimation=false
+UseFirmwareBackground=false
+
+[shutdown]
+UseEndAnimation=false
+UseFirmwareBackground=false
+
+[reboot]
+UseEndAnimation=false
+UseFirmwareBackground=false
+
+[updates]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Устанавливаются обновления…
+SubTitle=Не выключайте компьютер
+
+[system-upgrade]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Обновление системы…
+SubTitle=Не выключайте компьютер
+
+[firmware-upgrade]
+SuppressMessages=true
+ProgressBarShowPercentComplete=true
+UseProgressBar=true
+Title=Обновление прошивки…
+SubTitle=Не выключайте компьютер

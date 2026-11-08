@@ -72,5 +72,8 @@ ASTRAMARS_VPN_DEV=1 ASTRAMARS_VPN_HOME=/tmp/vpn-check QT_QPA_PLATFORM=offscreen 
     /usr/bin/ygolek-vpn --check
 rm -rf /tmp/vpn-check
 
-### 6. Уборка ##################################################################
+### 6. Заставка загрузки (последним: пересобирает initramfs) #################
+bash "$CTX/plymouth.sh"
+
+### 7. Уборка ##################################################################
 dnf5 clean all
