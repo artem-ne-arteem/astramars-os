@@ -49,18 +49,52 @@ def _fmt_bytes(n: float) -> str:
     return f"{int(n / 1024)} КБ"
 
 
+# Панели (Remnawave, Marzban, 3x-ui и др.) выбирают формат подписки по User-Agent.
+# Сначала просим обычный список ссылок, затем формат ядра sing-box, затем Clash/Mihomo.
+SUBSCRIPTION_AGENTS = (
+    f"AstraMarsVPN/{__version__}",
+    f"sing-box/{SINGBOX_VERSION}",
+    "clash.meta",
+)
+
+
+def _download(url: str, agent: str):
+    req = urllib.request.Request(url, headers={"User-Agent": agent, "Accept": "*/*"})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.read(5_000_000).decode("utf-8", "replace"), r.headers
+    except urllib.error.HTTPError:
+        raise
+    except (urllib.error.URLError, OSError):
+        # Сервер подписки недоступен напрямую — пробуем через наш прокси, если он запущен
+        if not _port_open(singbox.MIXED_PORT):
+            raise
+        proxy = f"http://127.0.0.1:{singbox.MIXED_PORT}"
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
+        with opener.open(req, timeout=20) as r:
+            return r.read(5_000_000).decode("utf-8", "replace"), r.headers
+
+
 def fetch_subscription(url: str):
-    req = urllib.request.Request(url, headers={"User-Agent": f"AstraMarsVPN/{__version__}"})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        body = r.read(5_000_000).decode("utf-8", "replace")
-        headers = r.headers
-    servers, errors = links.parse_subscription(body)
-    return {
-        "servers": servers,
-        "errors": errors,
-        "info": links.parse_userinfo(headers.get("subscription-userinfo", "")),
-        "title": links.parse_title(headers.get("profile-title", "")),
-    }
+    last_error = None
+    for agent in SUBSCRIPTION_AGENTS:
+        body, headers = _download(url, agent)
+        try:
+            servers, errors = links.parse_subscription(body)
+        except links.LinkError as e:
+            last_error = e
+            continue
+        if not servers and errors and agent != SUBSCRIPTION_AGENTS[-1]:
+            # Все серверы в этом формате не подошли (например, XHTTP) — пробуем другой
+            last_error = links.LinkError(errors[0])
+            continue
+        return {
+            "servers": servers,
+            "errors": errors,
+            "info": links.parse_userinfo(headers.get("subscription-userinfo", "")),
+            "title": links.parse_title(headers.get("profile-title", "")),
+        }
+    raise last_error or links.LinkError("в подписке нет серверов")
 
 
 class Backend(QObject):
@@ -261,14 +295,24 @@ class Backend(QObject):
         if not text:
             self.toast.emit("Вставьте ссылку или адрес подписки")
             return
-        if text.lower().startswith(("http://", "https://")) and "\n" not in text:
-            if any(sub["url"] == text for sub in self._data["subscriptions"]):
-                self.toast.emit("Эта подписка уже добавлена — обновляю")
-            else:
-                self._data["subscriptions"].append({"id": uuid.uuid4().hex[:8], "url": text})
-                self._save()
+        # Адреса подписок (https://… и ссылки-приглашения приложений) — отдельно от ссылок на серверы
+        urls, rest = [], []
+        for line in text.splitlines():
+            url = links.extract_subscription_url(line)
+            (urls if url else rest).append(url or line)
+        if urls:
+            known = {sub["url"] for sub in self._data["subscriptions"]}
+            for url in urls:
+                if url not in known:
+                    self._data["subscriptions"].append({"id": uuid.uuid4().hex[:8], "url": url})
+                    known.add(url)
+            self._save()
+            self.subscriptionsChanged.emit()
+            self.toast.emit("Загружаю подписку…")
             self.updateSubscriptions()
-            return
+            if not "\n".join(rest).strip():
+                return
+            text = "\n".join(rest)
         servers, errors = links.parse_many(text)
         added = self._merge(servers, sub_id=None)
         msg = f"Добавлено серверов: {added}" if added else "Новых серверов нет"

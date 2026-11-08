@@ -42,6 +42,93 @@ CASES = {
     "socks": "socks://dXNlcjpwYXNz@198.51.100.4:1080#SOCKS",
 }
 
+CLASH_YAML = f"""
+mixed-port: 7890
+proxies:
+  - name: "Clash Reality"
+    type: vless
+    server: r.example.com
+    port: 443
+    uuid: {UUID}
+    network: tcp
+    tls: true
+    flow: xtls-rprx-vision
+    servername: www.microsoft.com
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: {PBK}
+      short-id: 6ba85179e30d4fc2
+  - name: "Clash VMess WS"
+    type: vmess
+    server: vm.example.com
+    port: 443
+    uuid: {UUID}
+    alterId: 0
+    cipher: auto
+    tls: true
+    network: ws
+    ws-opts:
+      path: /ray
+      headers:
+        Host: cdn.example.com
+  - name: "Clash Trojan gRPC"
+    type: trojan
+    server: t.example.com
+    port: 443
+    password: pw
+    network: grpc
+    grpc-opts:
+      grpc-service-name: svc
+  - name: "Clash SS obfs"
+    type: ss
+    server: ss.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: secret
+    plugin: obfs
+    plugin-opts:
+      mode: tls
+      host: bing.com
+  - name: "Clash Hy2"
+    type: hysteria2
+    server: hy.example.com
+    port: 443
+    ports: 20000-30000
+    password: pw
+    obfs: salamander
+    obfs-password: cats
+  - name: "Clash TUIC"
+    type: tuic
+    server: tu.example.com
+    port: 443
+    uuid: {UUID}
+    password: pw
+    congestion-controller: bbr
+  - name: "Clash WireGuard"
+    type: wireguard
+    server: wg.example.com
+    port: 51820
+proxy-groups: []
+"""
+
+SINGBOX_JSON = json.dumps({"outbounds": [
+    {"type": "selector", "tag": "proxy", "outbounds": ["NL"]},
+    {"type": "vless", "tag": "NL", "server": "nl.example.com", "server_port": 443, "uuid": UUID,
+     "tls": {"enabled": True, "server_name": "nl.example.com"}},
+    {"type": "hysteria2", "tag": "FI", "server": "fi.example.com", "server_port": 443, "password": "pw",
+     "tls": {"enabled": True, "server_name": "fi.example.com"}},
+    {"type": "direct", "tag": "direct"},
+]})
+
+DEEP_LINKS = {
+    "https://sub.example.com/abc": "https://sub.example.com/abc",
+    "happ://add/https://sub.example.com/abc": "https://sub.example.com/abc",
+    "sing-box://import-remote-profile?url=https%3A%2F%2Fsub.example.com%2Fabc#My": "https://sub.example.com/abc",
+    "v2rayng://install-sub?url=https%3A%2F%2Fsub.example.com%2Fabc&name=x": "https://sub.example.com/abc",
+    "hiddify://import/https://sub.example.com/abc#name": "https://sub.example.com/abc",
+    f"vless://{UUID}@h.example.com:443?host=https://x#n": None,
+}
+
 EXPECT_FAIL = {
     "xhttp": f"vless://{UUID}@x.example.com:443?type=xhttp&security=tls#XHTTP",
     "unknown": "foo://bar",
@@ -82,6 +169,44 @@ def main():
     assert info == {"upload": 1024, "download": 2048, "total": 10737418240, "expire": 1798675200}, info
     assert links.parse_title("base64:" + base64.b64encode("Мой VPN".encode()).decode()) == "Мой VPN"
     print("ok   subscription headers")
+
+    # Подписка Clash/Mihomo
+    clash, clash_errors = links.parse_subscription(CLASH_YAML)
+    if len(clash) == 6 and len(clash_errors) == 1 and "wireguard" in clash_errors[0]:
+        print(f"ok   subscription clash: {len(clash)} серверов, пропущен WireGuard")
+        for s in clash:
+            servers["clash " + s["name"]] = s
+    else:
+        print(f"FAIL subscription clash: {len(clash)} серверов, ошибки {clash_errors}")
+        failed += 1
+
+    # Подписка sing-box JSON (служебные selector/direct пропускаются)
+    sbj, _ = links.parse_subscription(SINGBOX_JSON)
+    sbj_b64, _ = links.parse_subscription(base64.b64encode(SINGBOX_JSON.encode()).decode())
+    if [s["name"] for s in sbj] == ["NL", "FI"] and len(sbj_b64) == 2:
+        print("ok   subscription sing-box json (+ base64)")
+        for s in sbj:
+            servers["json " + s["name"]] = s
+    else:
+        print(f"FAIL subscription json: {[s['name'] for s in sbj]}")
+        failed += 1
+
+    # Веб-страница вместо подписки
+    try:
+        links.parse_subscription("<!DOCTYPE html><html><body>Подписка</body></html>")
+        print("FAIL html: ожидалась ошибка")
+        failed += 1
+    except links.LinkError as e:
+        print(f"ok   reject html: {e}")
+
+    # Ссылки-приглашения приложений
+    for line, expected in DEEP_LINKS.items():
+        got = links.extract_subscription_url(line)
+        if got == expected:
+            print(f"ok   deep link {line[:45]}")
+        else:
+            print(f"FAIL deep link {line}: {got!r} != {expected!r}")
+            failed += 1
 
     if not singbox_bin:
         print("\n(ядро sing-box не указано — проверка конфигураций пропущена)")

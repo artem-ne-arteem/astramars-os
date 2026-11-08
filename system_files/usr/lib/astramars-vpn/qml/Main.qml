@@ -346,7 +346,7 @@ ApplicationWindow {
                     font.pixelSize: 12
                     selectByMouse: true
                     selectionColor: Theme.mars
-                    placeholderText: "vless://…  vmess://…  trojan://…\nss://…  hy2://…  tuic://…  anytls://…"
+                    placeholderText: "https://sub.example.com/…\nvless://…  vmess://…  trojan://…\nss://…  hy2://…  tuic://…  anytls://…"
                     placeholderTextColor: Theme.faint
                     padding: 12
                     background: Rectangle {

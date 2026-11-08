@@ -19,6 +19,11 @@ PROTOCOL_LABELS = {
     "tuic": "TUIC",
     "anytls": "AnyTLS",
     "socks": "SOCKS",
+    "hysteria": "Hy1",
+    "shadowtls": "STLS",
+    "naive": "Naive",
+    "ssh": "SSH",
+    "http": "HTTP",
 }
 
 # Протоколы поверх UDP (QUIC): TCP-пинг для них не показателен
@@ -385,19 +390,248 @@ def looks_like_links(text: str) -> bool:
     return any(line.strip().lower().startswith(tuple(s + "://" for s in SCHEMES)) for line in text.splitlines())
 
 
+def _dedupe(servers):
+    seen, result = set(), []
+    for s in servers:
+        if s["id"] not in seen:
+            seen.add(s["id"])
+            result.append(s)
+    return result
+
+
+# --- подписка в формате sing-box (JSON) ---------------------------------------------
+
+SINGBOX_PROXY_TYPES = {"vless", "vmess", "trojan", "shadowsocks", "hysteria2", "tuic", "anytls",
+                       "socks", "hysteria", "shadowtls", "naive", "ssh", "http"}
+
+
+def parse_singbox_json(text: str):
+    try:
+        data = json.loads(text)
+    except ValueError as e:
+        raise LinkError("подписка в формате JSON повреждена") from e
+    if isinstance(data, dict):
+        outbounds = data.get("outbounds") or []
+    elif isinstance(data, list):
+        outbounds = data
+    else:
+        outbounds = []
+    servers = []
+    for ob in outbounds:
+        if not isinstance(ob, dict) or ob.get("type") not in SINGBOX_PROXY_TYPES or not ob.get("server"):
+            continue
+        ob = dict(ob)
+        name = str(ob.pop("tag", "") or ob["server"])
+        ob.pop("detour", None)
+        servers.append(_server(json.dumps(ob, sort_keys=True), name, ob))
+    if not servers:
+        raise LinkError("в JSON-подписке нет серверов")
+    return _dedupe(servers), []
+
+
+# --- подписка в формате Clash / Mihomo (YAML) -----------------------------------------
+
+def _from_clash(p: dict) -> dict:
+    t = str(p.get("type", "")).lower()
+    host = str(p["server"]).strip()
+    name = str(p.get("name") or host)
+    port_raw = str(p.get("port", "")).strip()
+
+    params = {}
+    sni = p.get("servername") or p.get("sni")
+    if sni:
+        params["sni"] = str(sni)
+    if p.get("skip-cert-verify"):
+        params["insecure"] = "1"
+    alpn = p.get("alpn")
+    if alpn:
+        params["alpn"] = ",".join(alpn) if isinstance(alpn, list) else str(alpn)
+    if p.get("client-fingerprint"):
+        params["fp"] = str(p["client-fingerprint"])
+    reality = p.get("reality-opts") or {}
+    if reality:
+        params["pbk"] = str(reality.get("public-key", ""))
+        params["sid"] = str(reality.get("short-id", ""))
+
+    net = str(p.get("network") or "tcp").lower()
+    ws = p.get("ws-opts") or {}
+    if net == "ws":
+        params["path"] = str(ws.get("path", ""))
+        params["host"] = str((ws.get("headers") or {}).get("Host", ""))
+        if ws.get("v2ray-http-upgrade"):
+            net = "httpupgrade"
+    elif net == "grpc":
+        params["serviceName"] = str((p.get("grpc-opts") or {}).get("grpc-service-name", ""))
+    elif net in ("h2", "http"):
+        opts = p.get("h2-opts") or p.get("http-opts") or {}
+        hosts = opts.get("host") or (opts.get("headers") or {}).get("Host") or []
+        params["host"] = ",".join(hosts) if isinstance(hosts, list) else str(hosts)
+        path = opts.get("path", "")
+        params["path"] = path[0] if isinstance(path, list) and path else str(path or "")
+
+    tls_on = bool(p.get("tls")) or bool(reality)
+
+    def base(kind):
+        return {"type": kind, "server": host, "server_port": _port(port_raw)}
+
+    if t == "vless":
+        ob = base("vless")
+        ob["uuid"] = str(p["uuid"])
+        if p.get("flow"):
+            ob["flow"] = str(p["flow"])
+        if tls_on:
+            ob["tls"] = _tls(params, host, reality=bool(reality))
+        ob["packet_encoding"] = "xudp"
+    elif t == "vmess":
+        ob = base("vmess")
+        ob.update(uuid=str(p["uuid"]), security=str(p.get("cipher") or "auto"), alter_id=int(p.get("alterId") or 0))
+        if tls_on:
+            ob["tls"] = _tls(params, host)
+        ob["packet_encoding"] = "xudp"
+    elif t == "trojan":
+        ob = base("trojan")
+        ob["password"] = str(p["password"])
+        ob["tls"] = _tls(params, host, reality=bool(reality))
+    elif t in ("ss", "shadowsocks"):
+        ob = base("shadowsocks")
+        ob.update(method=str(p["cipher"]), password=str(p["password"]))
+        if p.get("plugin") == "obfs":
+            opts = p.get("plugin-opts") or {}
+            ob["plugin"] = "obfs-local"
+            ob["plugin_opts"] = f"obfs={opts.get('mode', 'http')};obfs-host={opts.get('host', '')}"
+        elif p.get("plugin"):
+            raise LinkError(f"плагин Shadowsocks «{p['plugin']}» не поддерживается")
+        return _server(json.dumps(ob, sort_keys=True), name, ob)
+    elif t in ("hysteria2", "hy2"):
+        ob = {"type": "hysteria2", "server": host, "password": str(p.get("password") or p.get("auth") or "")}
+        if p.get("ports"):
+            ob["server_ports"] = [r.strip().replace("-", ":") for r in str(p["ports"]).split(",") if r.strip()]
+        if port_raw.isdigit():
+            ob["server_port"] = int(port_raw)
+        elif "server_ports" not in ob:
+            ob["server_port"] = 443
+        if p.get("obfs"):
+            ob["obfs"] = {"type": str(p["obfs"]), "password": str(p.get("obfs-password", ""))}
+        tls = _tls(params, host)
+        tls.setdefault("alpn", ["h3"])
+        ob["tls"] = tls
+        return _server(json.dumps(ob, sort_keys=True), name, ob)
+    elif t == "tuic":
+        ob = base("tuic")
+        ob.update(uuid=str(p.get("uuid", "")), password=str(p.get("password", "")),
+                  congestion_control=str(p.get("congestion-controller") or "bbr"),
+                  udp_relay_mode=str(p.get("udp-relay-mode") or "native"))
+        tls = _tls(params, host)
+        tls.setdefault("alpn", ["h3"])
+        ob["tls"] = tls
+        return _server(json.dumps(ob, sort_keys=True), name, ob)
+    elif t == "anytls":
+        ob = base("anytls")
+        ob["password"] = str(p.get("password", ""))
+        ob["tls"] = _tls(params, host)
+        return _server(json.dumps(ob, sort_keys=True), name, ob)
+    elif t in ("socks5", "socks"):
+        ob = base("socks")
+        ob["version"] = "5"
+        if p.get("username"):
+            ob["username"] = str(p["username"])
+            ob["password"] = str(p.get("password", ""))
+        return _server(json.dumps(ob, sort_keys=True), name, ob)
+    else:
+        raise LinkError(f"тип «{t}» не поддерживается")
+
+    transport = _transport(params, net)
+    if transport:
+        ob["transport"] = transport
+    return _server(json.dumps(ob, sort_keys=True), name, ob)
+
+
+def parse_clash_yaml(text: str):
+    try:
+        import yaml
+    except ImportError as e:
+        raise LinkError("для подписок Clash нужен модуль PyYAML") from e
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError as e:
+        raise LinkError("подписка в формате Clash повреждена") from e
+    proxies = data.get("proxies") if isinstance(data, dict) else None
+    if not proxies:
+        raise LinkError("в подписке Clash нет серверов")
+    servers, errors = [], []
+    for p in proxies:
+        if not isinstance(p, dict):
+            continue
+        try:
+            servers.append(_from_clash(p))
+        except LinkError as e:
+            errors.append(f"{p.get('name', '?')}: {e}")
+        except (KeyError, TypeError, ValueError) as e:
+            errors.append(f"{p.get('name', '?')}: не хватает поля {e}")
+    return _dedupe(servers), errors
+
+
+# --- общий разбор подписки ------------------------------------------------------------
+
+def subscription_format(body: str) -> str:
+    text = body.lstrip("﻿").strip()
+    low = text[:400].lower()
+    if text.startswith("<") or "<html" in low or "<!doctype" in low:
+        return "html"
+    if text.startswith(("{", "[")):
+        return "json"
+    if text.startswith("happ://"):
+        return "happ"
+    if looks_like_links(text):
+        return "links"
+    if re.search(r"^proxies\s*:", text, re.M):
+        return "clash"
+    return "base64"
+
+
 def parse_subscription(body: str):
-    """Тело подписки: список ссылок открытым текстом или в base64."""
-    text = body.strip()
-    if not looks_like_links(text):
-        if text.startswith(("{", "proxies:", "port:", "mixed-port:", "mode:")) or "\nproxies:" in text:
-            raise LinkError("подписка в формате Clash/sing-box пока не поддерживается — нужен список ссылок")
-        if text.startswith("happ://"):
-            raise LinkError("зашифрованные подписки Happ открываются только в самом Happ")
+    """Тело подписки: ссылки (текстом или base64), JSON sing-box или YAML Clash/Mihomo."""
+    text = body.lstrip("﻿").strip()
+    fmt = subscription_format(text)
+    if fmt == "html":
+        raise LinkError("сервер подписки вернул веб-страницу вместо списка серверов")
+    if fmt == "happ":
+        raise LinkError("зашифрованные подписки Happ открываются только в самом Happ")
+    if fmt == "json":
+        return parse_singbox_json(text)
+    if fmt == "clash":
+        return parse_clash_yaml(text)
+    if fmt == "base64":
         text = b64decode(text)
+        if subscription_format(text) == "json":
+            return parse_singbox_json(text)
     servers, errors = parse_many(text)
     if not servers and not errors:
         raise LinkError("в подписке нет серверов")
     return servers, errors
+
+
+def extract_subscription_url(line: str):
+    """Адрес подписки из строки: https://… или ссылки-приглашения приложений
+    (happ://add/https://…, sing-box://import-remote-profile?url=…, v2rayng://install-sub?url=… и т.п.)."""
+    line = line.strip()
+    low = line.lower()
+    if low.startswith(("http://", "https://")):
+        return line
+    if "://" not in line or low.split("://", 1)[0] in SCHEMES:
+        return None
+    params = _query(up.urlsplit(line).query)
+    for key in ("url", "sub", "link", "subscription"):
+        value = params.get(key, "")
+        if value.lower().startswith(("http://", "https://")):
+            return value
+    decoded = up.unquote(line)
+    idx = decoded.lower().find("https://")
+    if idx < 0:
+        idx = decoded.lower().find("http://")
+    if idx > 0:
+        return decoded[idx:].split("#", 1)[0].strip()
+    return None
 
 
 def parse_userinfo(header: str) -> dict:

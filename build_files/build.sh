@@ -13,6 +13,7 @@ dnf5 install -y \
     rsms-inter-fonts \
     jetbrains-mono-fonts-all \
     python3-pyside6 \
+    python3-pyyaml \
     qt6-qtsvg
 
 ### 2. Брендинг ##############################################################
