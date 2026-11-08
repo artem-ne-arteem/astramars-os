@@ -93,6 +93,24 @@ class SubscriptionDenied(Exception):
     """Сервер подписки отказал (401/403/404) на все варианты запроса."""
 
 
+class DeviceLimitExceeded(Exception):
+    """Панель (H1 и др.) отвечает device_limit_exceeded: все места для устройств заняты."""
+
+    def __init__(self, limit=None, used=None):
+        super().__init__(limit, used)
+        self.limit, self.used = limit, used
+
+
+def _device_limit_error(e: urllib.error.HTTPError):
+    try:
+        data = json.loads(e.read(4096).decode("utf-8", "replace") or "{}")
+    except (ValueError, OSError):
+        return None
+    if isinstance(data, dict) and "device" in str(data.get("error", "")).lower() and "limit" in str(data.get("error", "")).lower():
+        return DeviceLimitExceeded(data.get("limit"), data.get("used"))
+    return None
+
+
 def _download(url: str, agent: str):
     req = urllib.request.Request(url, headers={"User-Agent": agent, "Accept": "*/*", **_device_headers()})
     try:
@@ -117,6 +135,10 @@ def fetch_subscription(url: str):
         try:
             body, headers = _download(url, agent)
         except urllib.error.HTTPError as e:
+            limit = _device_limit_error(e)
+            if limit:
+                # Лимит устройств: другие форматы не помогут, а лишние попытки только путают учёт панели
+                raise limit
             if e.code in (401, 403, 404, 406, 451):
                 # Панель может пускать не все приложения или отдавать разные форматы — пробуем дальше
                 denied.append(e.code)
@@ -437,6 +459,13 @@ class Backend(QObject):
                     results.append((sub["id"], fetch_subscription(sub["url"]), ""))
                 except links.LinkError as e:
                     results.append((sub["id"], None, f"«{name}»: {e}"))
+                except DeviceLimitExceeded as e:
+                    count = f" ({e.used} из {e.limit})" if e.limit else ""
+                    hint = ("Продлите подписку с местом для ещё одного устройства в боте "
+                            "или отключите старое устройство") if sub.get("account") else \
+                           "Освободите место у провайдера подписки"
+                    results.append((sub["id"], None,
+                                    f"«{name}»: все места для устройств заняты{count}. {hint}"))
                 except SubscriptionDenied as e:
                     results.append((sub["id"], None,
                                     f"«{name}»: сервер не пускает это приложение (ошибка {e.args[0]}). "
