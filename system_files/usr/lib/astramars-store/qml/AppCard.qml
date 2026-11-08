@@ -12,6 +12,7 @@ Rectangle {
     property string developer: ""
     property string state_: "available"    // available | installed | update | queued | installing | updating | removing
     property int progress: 0
+    property string detail: ""   // скорость скачивания, например «12,8 МБ/с»
     signal installClicked()
     signal openClicked()
     signal removeClicked()
@@ -120,14 +121,33 @@ Rectangle {
                 Layout.fillWidth: true
                 visible: card.busy
                 spacing: 6
-                Text {
-                    text: card.state_ === "queued" ? "В очереди…"
-                        : card.state_ === "removing" ? "Удаляю…"
-                        : (card.state_ === "updating" ? "Обновляю" : "Устанавливаю")
-                          + (card.progress > 0 ? " · " + card.progress + "%" : "…")
-                    font.pixelSize: 12
-                    font.weight: Font.Medium
-                    color: Theme.fg
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Text {
+                        text: card.state_ === "queued" ? "В очереди…"
+                            : card.state_ === "removing" ? "Удаляю…"
+                            : card.state_ === "updating" ? "Обновляю" : "Скачиваю"
+                        font.pixelSize: 12
+                        font.weight: Font.Medium
+                        color: Theme.fg
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        text: card.measured ? card.detail : ""
+                        elide: Text.ElideRight
+                        font.pixelSize: 11
+                        color: Theme.faint
+                    }
+                    // Сколько уже скачано — крупно
+                    Text {
+                        visible: card.measured
+                        text: card.progress + "%"
+                        font.pixelSize: 16
+                        font.weight: Font.Bold
+                        font.features: { "tnum": 1 }
+                        color: Theme.fg
+                    }
                 }
                 Rectangle {
                     Layout.fillWidth: true

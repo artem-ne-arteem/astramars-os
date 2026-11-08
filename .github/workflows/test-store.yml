@@ -1,0 +1,29 @@
+name: Проверка магазина на настоящей установке
+
+# Ставит приложение с Flathub тем же кодом, что кнопка «Установить»,
+# и проверяет, что проценты и скорость доходят до интерфейса.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "system_files/usr/lib/astramars-store/**"
+      - "build_files/test_store_install.py"
+      - ".github/workflows/test-store.yml"
+  workflow_dispatch:
+
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v5
+
+      - name: Поставить flatpak и подключить Flathub
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q flatpak
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Установить приложение кнопкой магазина
+        run: python3 build_files/test_store_install.py system_files/usr/lib/astramars-store

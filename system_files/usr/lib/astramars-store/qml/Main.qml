@@ -192,6 +192,7 @@ ApplicationWindow {
                 required property string developer
                 required property string status
                 required property int progress
+                required property string detail
                 width: grid.cellWidth
                 height: grid.cellHeight
                 AppCard {
@@ -204,6 +205,7 @@ ApplicationWindow {
                     developer: parent.developer
                     state_: parent.status
                     progress: parent.progress
+                    detail: parent.detail
                     onInstallClicked: backend.install(appId)
                     onOpenClicked: backend.launch(appId)
                     onRemoveClicked: backend.remove(appId)

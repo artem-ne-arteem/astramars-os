@@ -12,7 +12,7 @@ UPDATES = "updates"
 SEARCH = "search"
 
 
-ROLES = ["appId", "name", "summary", "icon", "developer", "status", "progress"]
+ROLES = ["appId", "name", "summary", "icon", "developer", "status", "progress", "detail"]
 
 
 class AppModel(QAbstractListModel):
@@ -60,7 +60,7 @@ class Backend(QObject):
     toast = Signal(str)
 
     _catalogLoaded = Signal(object, object)
-    _jobProgress = Signal(str, int)
+    _jobProgress = Signal(str, int, str)   # id, процент, скорость
     _jobDone = Signal(str, str, str)  # id, action, error
     _appUpdatesFound = Signal(object)
     _systemRead = Signal(object, str)
@@ -266,6 +266,7 @@ class Backend(QObject):
             "developer": app["developer"],
             "status": state,
             "progress": job["progress"] if job else 0,
+            "detail": job.get("detail", "") if job else "",
         }
 
     def _enqueue(self, app_id, action):
@@ -275,10 +276,10 @@ class Backend(QObject):
         self._model.update_app(self._item(app_id))
 
         def work():
-            self._jobProgress.emit(app_id, 0)
+            self._jobProgress.emit(app_id, 0, "")
             try:
                 fn = {"install": self._fp.install, "remove": self._fp.uninstall, "update": self._fp.update}[action]
-                fn(app_id, lambda p: self._jobProgress.emit(app_id, p))
+                fn(app_id, lambda p, detail="": self._jobProgress.emit(app_id, p, detail))
                 self._jobDone.emit(app_id, action, "")
             except flatpak.FlatpakError as e:
                 self._jobDone.emit(app_id, action, str(e))
@@ -295,11 +296,12 @@ class Backend(QObject):
             self.loadingChanged.emit()
         self._refresh()
 
-    def _on_progress(self, app_id, value):
+    def _on_progress(self, app_id, value, detail):
         job = self._jobs.get(app_id)
         if job:
             job["queued"] = False
             job["progress"] = value
+            job["detail"] = detail
             self._model.update_app(self._item(app_id))
 
     def _on_done(self, app_id, action, error):
