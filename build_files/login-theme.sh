@@ -86,13 +86,18 @@ Item {
     BC.SessionManagementScreen {
         anchors.fill: parent
         userListModel: ListModel { ListElement { name: "astra"; realName: "Astra"; icon: ""; needsPassword: true } }
+        actionItems: [
+            BC.ActionButton { icon.name: "system-suspend"; text: "Сон" },
+            BC.ActionButton { icon.name: "system-shutdown"; text: "Выключение" }
+        ]
         Item { implicitHeight: 30 }
     }
     BC.RejectPasswordAnimation { target: clock }
     Timer {
         interval: 1500; running: true
         onTriggered: {
-            console.log("ASTRAMARS_LOGIN_THEME", clock.dotFont === "Doto" ? "OVERLAY_OK" : "OVERLAY_NOT_USED")
+            // warn, а не log: в Fedora отладочный вывод QML выключен
+            console.warn("ASTRAMARS_LOGIN_THEME", clock.dotFont === "Doto" ? "OVERLAY_OK" : "OVERLAY_NOT_USED")
             Qt.quit()
         }
     }
@@ -121,7 +126,7 @@ QML2_IMPORT_PATH="$OVL_ROOT" QML_IMPORT_PATH="$OVL_ROOT" QT_QPA_PLATFORM=offscre
 cat "$TEST/log.txt"
 grep -q "ASTRAMARS_LOGIN_THEME OVERLAY_OK" "$TEST/log.txt"
 if grep -E "Error|is not a type|not installed|is not available|Cannot assign|ReferenceError|TypeError" "$TEST/log.txt" \
-        | grep -v "Kirigami\|kirigami.*style\|libEGL\|MESA\|dbus\|D-Bus\|org.kde.plasma.private.battery"; then
+        | grep -v -E "Kirigami|kirigami.*style|libEGL|MESA|dbus|D-Bus|org.kde.plasma.private.battery|XDG_RUNTIME_DIR"; then
     echo "Тема экрана входа загружается с ошибками — останавливаю сборку"
     exit 1
 fi
