@@ -98,9 +98,26 @@ Item {
     }
 }
 QML
-QML_BIN="$(command -v qml || ls /usr/lib64/qt6/bin/qml)"
+# Отдельной программы qml в образе нет — грузим через PySide6 (те же системные Qt и модули)
+cat > "$TEST/run.py" <<'PY'
+import sys
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtQuick import QQuickView
+app = QGuiApplication(sys.argv)
+view = QQuickView()
+view.engine().warnings.connect(lambda ws: [print("QML warning:", w.toString(), flush=True) for w in ws])
+view.setSource(QUrl.fromLocalFile(sys.argv[1]))
+for e in view.errors():
+    print("QML Error:", e.toString(), flush=True)
+if view.status() != QQuickView.Status.Ready:
+    print("QML Error: test scene did not load", flush=True)
+    sys.exit(1)
+view.show()
+sys.exit(app.exec())
+PY
 QML2_IMPORT_PATH="$OVL_ROOT" QML_IMPORT_PATH="$OVL_ROOT" QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
-    timeout 60 "$QML_BIN" "$TEST/test.qml" > "$TEST/log.txt" 2>&1 || true
+    timeout 60 python3 "$TEST/run.py" "$TEST/test.qml" > "$TEST/log.txt" 2>&1 || true
 cat "$TEST/log.txt"
 grep -q "ASTRAMARS_LOGIN_THEME OVERLAY_OK" "$TEST/log.txt"
 if grep -E "Error|is not a type|not installed|is not available|Cannot assign|ReferenceError|TypeError" "$TEST/log.txt" \
