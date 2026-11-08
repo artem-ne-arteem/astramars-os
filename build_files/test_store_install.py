@@ -34,6 +34,11 @@ installed = subprocess.run(["flatpak", "list", "--app", "--columns=application"]
                            capture_output=True, text=True).stdout.split()
 assert APP in installed, f"{APP} не установилось"
 
+print("Строки прогресса flatpak (первые, середина, последние):")
+samples = fp.progress_samples
+for line in samples[:4] + samples[len(samples) // 2:len(samples) // 2 + 3] + samples[-3:]:
+    print("   ", line)
+
 percents = [p for _, p, _ in events]
 assert len(set(percents)) >= 5, f"слишком мало разных процентов: {sorted(set(percents))}"
 assert percents == sorted(percents), "проценты уменьшались"

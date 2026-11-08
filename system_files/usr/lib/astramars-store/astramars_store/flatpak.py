@@ -71,6 +71,9 @@ def _explain(text):
 
 
 class Flatpak:
+    def __init__(self):
+        self.progress_samples = []   # строки прогресса flatpak — для проверок и отладки
+
     def _run(self, *args, timeout=120):
         return subprocess.run(["flatpak", *args], capture_output=True, text=True, timeout=timeout)
 
@@ -165,6 +168,8 @@ class Flatpak:
                     line = ANSI.sub("", raw.decode("utf-8", "replace")).strip()
                     if line:
                         out.append(line)
+                    if "%" in line and len(self.progress_samples) < 40:
+                        self.progress_samples.append(repr(line))
                     if parser.feed(line):
                         on_progress(parser.percent, parser.speed)
                 # Строка прогресса перерисовывается без перевода строки — разбираем и хвост
