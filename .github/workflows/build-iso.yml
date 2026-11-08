@@ -1,66 +1,87 @@
 name: Сборка установочного ISO
 
 # Запускается вручную: вкладка Actions → «Сборка установочного ISO» → Run workflow
+#
+# Как устроен ISO: берём официальный установщик Fedora Kinoite (выпущенная версия) и встраиваем
+# в него kickstart с одной строкой — «ставить систему из образа ghcr.io/…/astramars-os».
+# Всё остальное (язык, диск, пользователь) установщик спрашивает как обычно, а ставит AstraMars.
+# Во время установки нужен интернет: образ системы скачивается с GitHub.
 on:
   workflow_dispatch:
+    inputs:
+      fedora:
+        description: Версия Fedora для установщика (выпущенная)
+        default: "44"
 
 env:
-  IMAGE_NAME: astramars-os
+  IMAGE: ghcr.io/artem-ne-arteem/astramars-os:latest
 
 jobs:
   iso:
     runs-on: ubuntu-24.04
     permissions:
       contents: write   # выложить ISO в релиз iso-latest (его скачивает установщик для Windows)
-      packages: read
     steps:
       - name: Освободить место на диске
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
           tool-cache: true
 
-      - name: Получить код
-        uses: actions/checkout@v5
-
-      - name: Скачать образ
-        id: image
+      - name: Скачать установщик Fedora Kinoite и проверить контрольную сумму
+        id: base
+        env:
+          REL: ${{ inputs.fedora || '44' }}
         run: |
-          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}:latest"
-          echo "ref=$IMAGE" >> "$GITHUB_OUTPUT"
-          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-          sudo podman pull "$IMAGE"
+          set -euo pipefail
+          BASE="https://dl.fedoraproject.org/pub/fedora/linux/releases/${REL}/Kinoite/x86_64/iso"
+          LIST="$(curl -fsSL "$BASE/")"
+          NAME="$(grep -o 'Fedora-Kinoite-ostree-x86_64-[0-9.-]*\.iso' <<<"$LIST" | head -1)"
+          SUMS="$(grep -o 'Fedora-Kinoite-[0-9.-]*-x86_64-CHECKSUM' <<<"$LIST" | head -1)"
+          echo "Установщик: $NAME"
+          mkdir -p work output
+          curl -fL --retry 5 -o "work/$NAME" "$BASE/$NAME"
+          curl -fsSL -o work/CHECKSUM "$BASE/$SUMS"
+          (cd work && grep "SHA256 ($NAME)" CHECKSUM | sha256sum -c -)
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Собрать ISO (bootc-image-builder)
+      - name: Встроить AstraMars в установщик (mkksiso)
         run: |
-          mkdir -p output
-          sudo podman run --rm --privileged --pull=newer \
-            --security-opt label=type:unconfined_t \
-            -v ./output:/output \
-            -v /var/lib/containers/storage:/var/lib/containers/storage \
-            quay.io/centos-bootc/bootc-image-builder:latest \
-            --type anaconda-iso \
-            --rootfs btrfs \
-            --log-level debug \
-            "${{ steps.image.outputs.ref }}"
-          sudo mv output/bootiso/install.iso "output/AstraMars-OS-$(date -u +%Y%m%d).iso"
+          set -euo pipefail
+          # Проверка, что образ системы доступен без входа (иначе установка не скачает его)
+          sudo skopeo inspect --raw "docker://${IMAGE}" > /dev/null
+          cat > work/astramars.ks <<EOF
+          # AstraMars OS: ставить систему из образа контейнера. Остальное установщик спросит сам.
+          ostreecontainer --url=${IMAGE} --transport=registry --no-signature-verification
+          EOF
+          OUT="AstraMars-OS-$(date -u +%Y%m%d).iso"
+          sudo podman run --rm --privileged -v "$PWD/work:/work" -v "$PWD/output:/output" -w /work \
+            quay.io/fedora/fedora:${{ inputs.fedora || '44' }} bash -euxc "
+              dnf -y -q install lorax xorriso isomd5sum
+              mkksiso --ks astramars.ks '${{ steps.base.outputs.name }}' '/output/$OUT'
+              implantisomd5 '/output/$OUT' || true
+              # В ISO действительно лежит наш kickstart и загрузчик знает о нём
+              xorriso -indev '/output/$OUT' -osirrox on -extract /astramars.ks /tmp/check.ks
+              grep -q 'ostreecontainer --url=${IMAGE}' /tmp/check.ks
+              xorriso -indev '/output/$OUT' -osirrox on -extract /EFI/BOOT/grub.cfg /tmp/grub.cfg
+              grep -q 'inst.ks' /tmp/grub.cfg
+              echo 'kickstart в ISO: ок'
+            "
+          sudo chown -R "$(id -u)" output
+          rm -f "work/${{ steps.base.outputs.name }}"
+          ls -la output
 
       - name: Выложить ISO в релиз iso-latest (частями по 1,9 ГБ — ограничение GitHub 2 ГБ на файл)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           cd output
           ISO="$(ls *.iso)"
-          sudo chown "$(id -u)" "$ISO"
           sha256sum "$ISO" | awk '{print $1}' > "$ISO.sha256"
           split -b 1900M -d -a 2 "$ISO" "$ISO.part"
           ls -la
           gh release delete iso-latest --yes --cleanup-tag -R "$GITHUB_REPOSITORY" || true
-          gh release create iso-latest -R "$GITHUB_REPOSITORY" --title "AstraMars OS — установочный образ"             --notes "Установочный ISO AstraMars OS ($(date -u +%Y-%m-%d)). Скачивается установщиком для Windows (AstraMars-Setup) и собирается из частей. Вручную: скачайте все части .partNN и склейте: Windows — copy /b ${ISO}.part00+${ISO}.part01+… ${ISO}; Linux — cat ${ISO}.part* > ${ISO}. Контрольная сумма — в файле .sha256."             --latest=false "$ISO.sha256" "$ISO".part*
-
-      - name: Выложить ISO
-        uses: actions/upload-artifact@v4
-        with:
-          name: AstraMars-OS-ISO
-          path: output/*.iso
-          compression-level: 0
-          retention-days: 7
+          gh release create iso-latest -R "$GITHUB_REPOSITORY" \
+            --title "AstraMars OS — установочный образ" \
+            --notes "Установочный ISO AstraMars OS ($(date -u +%Y-%m-%d)): установщик Fedora Kinoite, который ставит AstraMars (во время установки нужен интернет). Скачивается установщиком для Windows и собирается из частей. Вручную: скачайте все части .partNN и склейте — Windows: copy /b ${ISO}.part00+${ISO}.part01 ${ISO} (все части по порядку); Linux: cat ${ISO}.part* > ${ISO}. Контрольная сумма SHA-256 — в файле .sha256." \
+            --latest=false "$ISO.sha256" "$ISO".part*
