@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+# Быстрые действия AstraMars
+exec /usr/bin/python3 /usr/lib/astramars-actions/main.py "$@"

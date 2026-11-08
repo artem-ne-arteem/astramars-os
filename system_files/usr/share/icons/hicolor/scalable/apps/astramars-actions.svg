@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="256" height="256">
+  <!-- Быстрые действия AstraMars: молния из точек -->
+  <rect x="20" y="20" width="600" height="600" rx="140" fill="#0b0b0b"/>
+  <rect x="21" y="21" width="598" height="598" rx="139" fill="none" stroke="#2a2a2a" stroke-width="2"/>
+  <g fill="#f2f2f2">
+    <circle cx="371" cy="218" r="11"/>
+    <circle cx="405" cy="218" r="11"/>
+    <circle cx="337" cy="252" r="11"/>
+    <circle cx="371" cy="252" r="11"/>
+    <circle cx="303" cy="286" r="11"/>
+    <circle cx="337" cy="286" r="11"/>
+    <circle cx="269" cy="320" r="11"/>
+    <circle cx="303" cy="320" r="11"/>
+    <circle cx="337" cy="320" r="11"/>
+    <circle cx="371" cy="320" r="11"/>
+    <circle cx="405" cy="320" r="11"/>
+    <circle cx="337" cy="354" r="11"/>
+    <circle cx="371" cy="354" r="11"/>
+    <circle cx="303" cy="388" r="11"/>
+    <circle cx="337" cy="388" r="11"/>
+    <circle cx="269" cy="422" r="11"/>
+    <circle cx="303" cy="422" r="11"/>
+  </g>
+  <circle cx="500" cy="140" r="18" fill="#ff3b30"/>
+</svg>

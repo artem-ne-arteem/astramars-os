@@ -81,6 +81,12 @@ python3 "$CTX/store_selftest.py" /usr/lib/astramars-store /tmp/store-check
 ASTRAMARS_STORE_DEV=1 ASTRAMARS_STORE_APPSTREAM=/tmp/store-check QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software     /usr/bin/astramars-store --check
 rm -rf /tmp/store-check
 
+### 5в. Быстрые действия ###########################################################
+chmod +x /usr/bin/astramars-actions
+python3 "$CTX/actions_selftest.py" /usr/lib/astramars-actions
+ASTRAMARS_ACTIONS_DEV=1 ASTRAMARS_ACTIONS_HOME=/tmp/actions-check QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software     /usr/bin/astramars-actions --check
+rm -rf /tmp/actions-check
+
 ### 6. Заставка загрузки (последним: пересобирает initramfs) #################
 bash "$CTX/plymouth.sh"
 

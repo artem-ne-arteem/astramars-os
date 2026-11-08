@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Быстрые действия
+Name[en]=AstraMars Actions
+GenericName=Действия одной кнопкой
+Comment=Очистить систему, починить звук, перезапустить сеть, проверить интернет и свои цепочки команд
+Exec=astramars-actions
+Icon=astramars-actions
+Terminal=false
+Categories=System;Utility;
+Keywords=actions;shortcuts;automation;clean;cleanup;действия;команды;очистка;сценарии;автоматизация;
+StartupWMClass=astramars-actions
