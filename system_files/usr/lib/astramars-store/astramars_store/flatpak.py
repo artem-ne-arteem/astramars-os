@@ -14,7 +14,8 @@ FLATHUB = "https://dl.flathub.org/repo/flathub.flatpakrepo"
 ANSI = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b[()][0-9A-Za-z]|\x1b[=>78]")
 PERCENT = re.compile(r"(\d{1,3})\s?%")
 STEP = re.compile(r"(?:Installing|Updating|Uninstalling|Downloading)\s+(\d+)/(\d+)")
-SPEED = re.compile(r"(\d+(?:[.,]\d+)?)\s*([kKMG])B/s")
+# Между числом и единицей flatpak ставит неразрывный пробел (в локали C — «?»)
+SPEED = re.compile(r"(\d+(?:[.,]\d+)?)[\s ?]*([kKMG])B/s")
 UNITS = {"k": "КБ/с", "K": "КБ/с", "M": "МБ/с", "G": "ГБ/с"}
 
 
@@ -141,7 +142,7 @@ class Flatpak:
         master, slave = pty.openpty()
         # Широкий «терминал», чтобы строка прогресса не обрезалась
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 160, 0, 0))
-        env = dict(os.environ, LC_ALL="C", LANG="C", TERM="xterm-256color", COLUMNS="160")
+        env = dict(os.environ, LC_ALL="C.UTF-8", LANG="C.UTF-8", TERM="xterm-256color", COLUMNS="160")
         # Терминал только на выходе: проценты flatpak пишет туда. На входе — пустота,
         # чтобы он не стал спрашивать пароль в терминале и не завис в ожидании.
         proc = subprocess.Popen(["flatpak", *args], stdin=subprocess.DEVNULL, stdout=slave, stderr=slave,
