@@ -72,6 +72,14 @@ ASTRAMARS_VPN_DEV=1 ASTRAMARS_VPN_HOME=/tmp/vpn-check QT_QPA_PLATFORM=offscreen 
     /usr/bin/ygolek-vpn --check
 rm -rf /tmp/vpn-check
 
+### 5б. AstraMars Store (магазин приложений) ###################################
+chmod +x /usr/bin/astramars-store
+mkdir -p /tmp/store-check
+curl -fsSL --retry 3 -o /tmp/store-check/appstream.xml.gz     https://dl.flathub.org/repo/appstream/x86_64/appstream.xml.gz
+python3 "$CTX/store_selftest.py" /usr/lib/astramars-store /tmp/store-check
+ASTRAMARS_STORE_DEV=1 ASTRAMARS_STORE_APPSTREAM=/tmp/store-check QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software     /usr/bin/astramars-store --check
+rm -rf /tmp/store-check
+
 ### 6. Заставка загрузки (последним: пересобирает initramfs) #################
 bash "$CTX/plymouth.sh"
 

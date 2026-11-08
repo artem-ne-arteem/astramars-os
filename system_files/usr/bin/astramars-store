@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+# AstraMars Store — магазин приложений
+exec /usr/bin/python3 /usr/lib/astramars-store/main.py "$@"

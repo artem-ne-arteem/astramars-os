@@ -70,6 +70,16 @@ Actions → «Сборка установочного ISO» → **Run workflow**
 `build_files/make_splash_assets.py` из `logo.png`; тема встраивается в initramfs при сборке,
 и сборка проверяет, что она там есть (`build_files/plymouth.sh`).
 
+## AstraMars Store
+
+<img src="docs/astramars-store.png" width="480" alt="AstraMars Store">
+
+Магазин приложений: ищите в меню «AstraMars Store» или запустите `astramars-store`.
+Подборка по разделам (Интернет, Общение, Игры, Мультимедиа, Работа, Творчество, Разработка, Утилиты),
+поиск по всему Flathub (названия и описания по-русски), установка, запуск и удаление одной кнопкой.
+Внутри — `flatpak` и Flathub: администраторы ставят без пароля, через прокси, если он включён.
+При сборке `build_files/store_selftest.py` проверяет свежий каталог Flathub, а `astramars-store --check` — интерфейс.
+
 ## Ygolek VPN
 
 <img src="docs/ygolek-vpn.png" width="320" align="right" alt="Ygolek VPN">

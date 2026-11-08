@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=AstraMars Store
+Name[ru]=AstraMars Store
+GenericName=Магазин приложений
+Comment=Установка приложений одной кнопкой: Telegram, Steam, Discord, VLC, OBS и тысячи других
+Exec=astramars-store
+Icon=astramars-store
+Terminal=false
+Categories=System;PackageManager;
+Keywords=store;apps;install;flatpak;flathub;магазин;приложения;установить;программы;
+StartupWMClass=astramars-store
