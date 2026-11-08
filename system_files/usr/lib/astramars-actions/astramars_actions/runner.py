@@ -28,7 +28,9 @@ def human_bytes(n):
 class Runner:
     def run_step(self, step):
         """(успех, вывод) для одного шага."""
-        cmd = ["pkexec", "/usr/bin/bash", "-c", step["run"]] if step.get("root") else ["bash", "-lc", step["run"]]
+        # pipefail: ошибка в начале цепочки «a | b» не должна прятаться за успехом последней команды
+        script = "set -o pipefail; " + step["run"]
+        cmd = ["pkexec", "/usr/bin/bash", "-c", script] if step.get("root") else ["bash", "-lc", script]
         try:
             p = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
                                timeout=STEP_TIMEOUT, env=dict(os.environ, LC_NUMERIC="C"))

@@ -25,7 +25,8 @@ for a in actions.BUILTIN:
 print(f"синтаксис: {sum(len(a['steps']) for a in actions.BUILTIN)} команд проверено")
 
 # Безопасные действия выполняются по-настоящему
-os.environ.setdefault("HOME", tempfile.mkdtemp())
+if not os.path.isdir(os.environ.get("HOME", "")):
+    os.environ["HOME"] = tempfile.mkdtemp()   # в контейнере сборки домашней папки может не быть
 r = runner.Runner()
 for action_id in ("space", "sysinfo"):
     a = next(x for x in actions.BUILTIN if x["id"] == action_id)
