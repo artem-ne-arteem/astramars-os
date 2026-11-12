@@ -41,6 +41,11 @@ irm https://artem-ne-arteem.github.io/astramars-os/install.ps1 | iex
 скачает ISO из релиза `iso-latest` (частями, с проверкой SHA-256) и запишет флешку. Дальше — загрузка с флешки и установка
 в свободное место. ISO в релиз выкладывает «Сборка установочного ISO» (Actions → Run workflow).
 
+ISO — это установщик Fedora Kinoite с kickstart `ostreecontainer` (ставит образ AstraMars из ghcr.io, нужен интернет)
+и оформлением AstraMars: `installer/product/` упаковывается в `images/product.img` — название «AstraMars OS»,
+чёрная боковая панель с точками, логотип, красные кнопки (картинки делает `build_files/make_installer_branding.py`).
+В планах — свой установщик: живой ISO с AstraMars и приложением «Установить» в стиле Настроек.
+
 **Вариант А — через Fedora Kinoite:**
 1. Установите обычную Fedora Kinoite второй системой: https://fedoraproject.org/atomic-desktops/kinoite/
 2. В терминале выполните:
