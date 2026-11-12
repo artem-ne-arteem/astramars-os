@@ -58,6 +58,13 @@ jobs:
           # Остальное (язык, диск, пользователь) установщик спросит сам.
           ostreecontainer --url=/run/install/repo/container --transport=oci --no-signature-verification
 
+          %pre-install --erroronfail
+          # Загрузчик ставит bootupd (как «bootc install»): ostree при разворачивании меню
+          # загрузки не собирает — иначе grub2-mkconfig установщика падает на образе AstraMars.
+          ostree admin --sysroot=/mnt/sysimage init-fs /mnt/sysimage
+          ostree config --repo=/mnt/sysimage/ostree/repo set sysroot.bootloader none
+          %end
+
           %post --erroronfail
           # Дальше обновляться из GitHub, а не с флешки
           bootc switch --mutate-in-place --transport registry ${IMAGE}
@@ -82,6 +89,7 @@ jobs:
           xorriso -indev "/output/$OUT" -osirrox on             -extract /astramars.ks /tmp/check.ks -extract /EFI/BOOT/grub.cfg /tmp/grub.cfg             -extract /images/product.img /tmp/product.img
           grep -q "ostreecontainer --url=/run/install/repo/container" /tmp/check.ks
           grep -q "bootc switch --mutate-in-place --transport registry $IMAGE" /tmp/check.ks
+          grep -q "sysroot.bootloader none" /tmp/check.ks
           xorriso -indev "/output/$OUT" -ls /container | tee /tmp/container.txt
           grep -q "index.json" /tmp/container.txt && grep -q "blobs" /tmp/container.txt
           grep -q "inst.ks" /tmp/grub.cfg
