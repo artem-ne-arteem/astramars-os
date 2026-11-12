@@ -133,9 +133,10 @@ function Get-UnallocatedGB {
         $num = (Get-Partition -DriveLetter C).DiskNumber
         $disk = Get-Disk -Number $num
         $parts = @(Get-Partition -DiskNumber $num | Sort-Object Offset)
-        $best = 0; $pos = 1MB
-        foreach ($p in $parts) { $best = [math]::Max($best, $p.Offset - $pos); $pos = $p.Offset + $p.Size }
-        $best = [math]::Max($best, $disk.Size - $pos - 1MB)
+        # Считаем в double: размеры дисков не помещаются в Int32, который PowerShell выбирает для Max
+        $best = 0.0; $pos = [double]1MB
+        foreach ($p in $parts) { $best = [math]::Max($best, [double]$p.Offset - $pos); $pos = [double]$p.Offset + [double]$p.Size }
+        $best = [math]::Max($best, [double]$disk.Size - $pos - 1MB)
         return [math]::Floor($best / 1GB)
     } catch { return 0 }
 }
@@ -232,8 +233,8 @@ function Show-Space {
     $part = Get-Partition -DriveLetter C
     try { $sup = Get-PartitionSupportedSize -DriveLetter C -ErrorAction Stop }
     catch { $sup = @{ SizeMin = $part.Size - ($state.freeGB - 5) * 1GB } }   # просмотр без прав администратора
-    $maxGB = [math]::Floor(($part.Size - $sup.SizeMin) / 1GB) - 10
-    $maxGB = [math]::Min($maxGB, $state.freeGB - 15)
+    $maxGB = [int]([math]::Floor(([double]$part.Size - [double]$sup.SizeMin) / 1GB) - 10)
+    $maxGB = [int][math]::Min([double]$maxGB, [double]($state.freeGB - 15))
     $page.Controls.Add((Label "Сколько места отдать AstraMars" 0 0 600 32 15 $true))
     $page.Controls.Add((Label ("Раздел Windows (C:) станет меньше — файлы и программы Windows не пострадают. " +
         "Рекомендуем $RecommendedGB ГБ и больше, если будете ставить игры.") 0 40 696 48 10 $false $Muted))
