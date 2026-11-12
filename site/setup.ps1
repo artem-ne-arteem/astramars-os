@@ -319,7 +319,16 @@ function Do-Download {
         $iso = Join-Path $DownloadDir $isoName
         $total = ($parts | Measure-Object size -Sum).Sum
         $expected = ([Text.Encoding]::ASCII.GetString((New-Object Net.WebClient).DownloadData($sumAsset.browser_download_url))).Trim().Split()[0].ToLower()
-        if (-not (Test-Path $iso) -or (Get-Item $iso).Length -ne $total) {
+        # Уже скачанный образ годится, только если совпадает контрольная сумма новой версии
+        if ((Test-Path $iso) -and (Get-Item $iso).Length -eq $total) {
+            $dlText.Text = "Проверяю уже скачанный образ…"; Pump
+            if ((Get-FileHash $iso -Algorithm SHA256).Hash.ToLower() -ne $expected) { Remove-Item $iso }
+        }
+        if (-not (Test-Path $iso)) {
+            # Части от прошлой версии с теми же именами не годятся — удаляем
+            Get-ChildItem $DownloadDir -Filter "*.iso.part*" -ErrorAction SilentlyContinue | Where-Object {
+                $name = $_.Name; -not ($parts | Where-Object { $_.name -eq $name -and $_.size -eq (Get-Item (Join-Path $DownloadDir $name)).Length })
+            } | Remove-Item -ErrorAction SilentlyContinue
             $done = 0
             foreach ($p in $parts) {
                 $dst = Join-Path $DownloadDir $p.name
@@ -343,7 +352,10 @@ function Do-Download {
         }
         $dlText.Text = "Проверяю контрольную сумму…"; $dlBar.Value = 100; Pump
         $hash = (Get-FileHash $iso -Algorithm SHA256).Hash.ToLower()
-        if ($hash -ne $expected) { Remove-Item $iso; throw "образ повреждён при скачивании — запустите скачивание снова" }
+        if ($hash -ne $expected) {
+            Remove-Item $iso
+            foreach ($p in $parts) { Remove-Item (Join-Path $DownloadDir $p.name) -ErrorAction SilentlyContinue }
+            throw "образ повреждён при скачивании — запустите скачивание снова" }
         foreach ($p in $parts) { Remove-Item (Join-Path $DownloadDir $p.name) -ErrorAction SilentlyContinue }
         $state.iso = $iso
         Show-Usb
