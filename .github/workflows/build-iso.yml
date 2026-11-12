@@ -2,10 +2,11 @@ name: Сборка установочного ISO
 
 # Запускается вручную: вкладка Actions → «Сборка установочного ISO» → Run workflow
 #
-# Как устроен ISO: берём официальный установщик Fedora Kinoite (выпущенная версия) и встраиваем
-# в него kickstart с одной строкой — «ставить систему из образа ghcr.io/…/astramars-os».
-# Всё остальное (язык, диск, пользователь) установщик спрашивает как обычно, а ставит AstraMars.
-# Во время установки нужен интернет: образ системы скачивается с GitHub.
+# Как устроен ISO: берём официальный установщик Fedora Kinoite (выпущенная версия), кладём в него
+# сам образ AstraMars (папка /container в формате OCI) и kickstart «ставить систему из этой папки».
+# Интернет при установке не нужен. После установки система переключается на обновления
+# из ghcr.io/…/astramars-os (bootc switch --mutate-in-place) — так же делает bootc-image-builder.
+# Язык, диск и пользователя установщик спрашивает как обычно; оформление — installer/product.
 on:
   workflow_dispatch:
     inputs:
@@ -52,23 +53,37 @@ jobs:
       - name: Встроить AstraMars в установщик (kickstart и оформление)
         run: |
           set -euo pipefail
-          # Проверка, что образ системы доступен без входа (иначе установка не скачает его)
-          sudo skopeo inspect --raw "docker://${IMAGE}" > /dev/null
           cat > work/astramars.ks <<EOF
-          # AstraMars OS: ставить систему из образа контейнера. Остальное установщик спросит сам.
-          ostreecontainer --url=${IMAGE} --transport=registry --no-signature-verification
+          # AstraMars OS: ставить систему из образа на этой флешке (без интернета).
+          # Остальное (язык, диск, пользователь) установщик спросит сам.
+          ostreecontainer --url=/run/install/repo/container --transport=oci --no-signature-verification
+
+          %post --erroronfail
+          # Дальше обновляться из GitHub, а не с флешки
+          bootc switch --mutate-in-place --transport registry ${IMAGE}
+          %end
           EOF
           cat > work/build.sh <<'SH'
           set -euxo pipefail
-          dnf -y -q install lorax xorriso isomd5sum cpio gzip
+          dnf -y -q install lorax xorriso isomd5sum cpio gzip skopeo
+          # Сам образ системы — на флешку (формат OCI: папка с частями образа)
+          skopeo copy --retry-times 3 "docker://$IMAGE" oci:/work/container
+          du -sh /work/container
+          # ISO 9660 не хранит файлы больше 4 ГБ — проверяем части образа
+          big=$(find /work/container -type f -size +4000000k | wc -l)
+          test "$big" -eq 0
           # product.img: Anaconda распаковывает его поверх своей системы — название, стиль, картинки
           mkdir -p /work/images
           (cd /repo/installer/product && find . | cpio -o -H newc --quiet | gzip -9 > /work/images/product.img)
-          mkksiso --add /work/images --ks /work/astramars.ks "/work/$BASE_ISO" "/output/$OUT"
+          mkksiso --add /work/images --add /work/container --ks /work/astramars.ks "/work/$BASE_ISO" "/output/$OUT"
+          rm -rf /work/container "/work/$BASE_ISO"
           implantisomd5 --force "/output/$OUT" || true
           # Проверки: kickstart, загрузчик знает о нём, оформление и система установщика на месте
           xorriso -indev "/output/$OUT" -osirrox on             -extract /astramars.ks /tmp/check.ks -extract /EFI/BOOT/grub.cfg /tmp/grub.cfg             -extract /images/product.img /tmp/product.img
-          grep -q "ostreecontainer --url=$IMAGE" /tmp/check.ks
+          grep -q "ostreecontainer --url=/run/install/repo/container" /tmp/check.ks
+          grep -q "bootc switch --mutate-in-place --transport registry $IMAGE" /tmp/check.ks
+          xorriso -indev "/output/$OUT" -ls /container | tee /tmp/container.txt
+          grep -q "index.json" /tmp/container.txt && grep -q "blobs" /tmp/container.txt
           grep -q "inst.ks" /tmp/grub.cfg
           xorriso -indev "/output/$OUT" -ls /images | tee /tmp/images.txt
           grep -q "install.img" /tmp/images.txt
@@ -76,12 +91,11 @@ jobs:
           grep -q "Product=AstraMars OS" /tmp/p/.buildstamp
           test -s /tmp/p/usr/share/anaconda/pixmaps/astramars/astramars.css
           grep -q "custom_stylesheet" /tmp/p/etc/anaconda/conf.d/90-astramars.conf
-          echo "kickstart и оформление в ISO: ок"
+          echo "kickstart, образ системы и оформление в ISO: ок"
           SH
           OUT="AstraMars-OS-$(date -u +%Y%m%d).iso"
           sudo podman run --rm --privileged             -v "$PWD/work:/work" -v "$PWD/output:/output" -v "$PWD/repo:/repo:ro"             -e IMAGE="$IMAGE" -e OUT="$OUT" -e BASE_ISO="${{ steps.base.outputs.name }}"             quay.io/fedora/fedora:${{ inputs.fedora || '44' }} bash /work/build.sh
           sudo chown -R "$(id -u)" output
-          rm -f "work/${{ steps.base.outputs.name }}"
           ls -la output
 
       - name: Выложить ISO в релиз iso-latest (частями по 1,9 ГБ — ограничение GitHub 2 ГБ на файл)
@@ -93,9 +107,10 @@ jobs:
           ISO="$(ls *.iso)"
           sha256sum "$ISO" | awk '{print $1}' > "$ISO.sha256"
           split -b 1900M -d -a 2 "$ISO" "$ISO.part"
+          rm -f "$ISO"
           ls -la
           gh release delete iso-latest --yes --cleanup-tag -R "$GITHUB_REPOSITORY" || true
           gh release create iso-latest -R "$GITHUB_REPOSITORY" \
             --title "AstraMars OS — установочный образ" \
-            --notes "Установочный ISO AstraMars OS ($(date -u +%Y-%m-%d)): установщик Fedora Kinoite, который ставит AstraMars (во время установки нужен интернет). Скачивается установщиком для Windows и собирается из частей. Вручную: скачайте все части .partNN и склейте — Windows: copy /b ${ISO}.part00+${ISO}.part01 ${ISO} (все части по порядку); Linux: cat ${ISO}.part* > ${ISO}. Контрольная сумма SHA-256 — в файле .sha256." \
+            --notes "Установочный ISO AstraMars OS ($(date -u +%Y-%m-%d)): установщик Fedora Kinoite в оформлении AstraMars, сама система уже на флешке — интернет при установке не нужен. Скачивается установщиком для Windows и собирается из частей. Вручную: скачайте все части .partNN и склейте — Windows: copy /b ${ISO}.part00+${ISO}.part01 ${ISO} (все части по порядку); Linux: cat ${ISO}.part* > ${ISO}. Контрольная сумма SHA-256 — в файле .sha256." \
             --latest=false "$ISO.sha256" "$ISO".part*
