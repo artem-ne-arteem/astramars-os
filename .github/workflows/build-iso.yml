@@ -79,7 +79,7 @@ jobs:
           echo "kickstart и оформление в ISO: ок"
           SH
           OUT="AstraMars-OS-$(date -u +%Y%m%d).iso"
-          sudo podman run --rm --privileged             -v "$PWD/work:/work" -v "$PWD/output:/output" -v "$PWD/repo:/repo:ro"             -e IMAGE -e OUT="$OUT" -e BASE_ISO="${{ steps.base.outputs.name }}"             quay.io/fedora/fedora:${{ inputs.fedora || '44' }} bash /work/build.sh
+          sudo podman run --rm --privileged             -v "$PWD/work:/work" -v "$PWD/output:/output" -v "$PWD/repo:/repo:ro"             -e IMAGE="$IMAGE" -e OUT="$OUT" -e BASE_ISO="${{ steps.base.outputs.name }}"             quay.io/fedora/fedora:${{ inputs.fedora || '44' }} bash /work/build.sh
           sudo chown -R "$(id -u)" output
           rm -f "work/${{ steps.base.outputs.name }}"
           ls -la output
