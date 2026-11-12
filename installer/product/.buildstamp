@@ -1,0 +1,7 @@
+[Main]
+Product=AstraMars OS
+Version=45
+BugURL=https://github.com/artem-ne-arteem/astramars-os/issues
+IsFinal=True
+UUID=202611120000.x86_64
+Variant=Kinoite

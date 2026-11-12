@@ -1,0 +1,87 @@
+/* Оформление установщика AstraMars OS (Anaconda, GTK 3).
+ * Подключается через /etc/anaconda/conf.d/90-astramars.conf вместо стиля Fedora.
+ * Чёрная боковая панель с точками, логотип, надпись ASTRAMARS точками и один красный акцент.
+ */
+@define-color astramars_bg #000000;
+@define-color astramars_accent #ff3b30;
+@define-color astramars_accent_dark #d42a20;
+
+/* Боковая панель: фон, логотип, надпись — рисуются в этом порядке */
+.logo-sidebar {
+    background-color: @astramars_bg;
+    background-image: url('/usr/share/anaconda/pixmaps/astramars/sidebar-bg.png');
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+}
+
+.logo {
+    background-image: url('/usr/share/anaconda/pixmaps/astramars/sidebar-logo.png');
+    background-position: 50% 24px;
+    background-repeat: no-repeat;
+    background-color: transparent;
+}
+
+.product-logo {
+    background-image: url('/usr/share/anaconda/pixmaps/astramars/product-logo.png');
+    background-position: 50% 150px;
+    background-repeat: no-repeat;
+    background-color: transparent;
+}
+
+/* Верхняя полоса в окнах шагов */
+AnacondaSpokeWindow #nav-box {
+    background-color: @astramars_bg;
+    background-image: url('/usr/share/anaconda/pixmaps/astramars/topbar-bg.png');
+    background-repeat: no-repeat;
+    background-position: 100% 0;
+    color: white;
+}
+
+AnacondaSpokeWindow #nav-box GtkButton,
+AnacondaSpokeWindow #nav-box button {
+    box-shadow: none;
+}
+
+/* Главные кнопки («Начать установку», «Готово») — красные */
+button.suggested-action,
+.suggested-action {
+    background-image: none;
+    background-color: @astramars_accent;
+    border-color: @astramars_accent_dark;
+    color: white;
+    text-shadow: none;
+    box-shadow: none;
+}
+
+button.suggested-action:hover,
+.suggested-action:hover {
+    background-image: none;
+    background-color: shade(@astramars_accent, 1.08);
+}
+
+button.suggested-action:active,
+.suggested-action:active {
+    background-image: none;
+    background-color: @astramars_accent_dark;
+}
+
+button.suggested-action:disabled,
+.suggested-action:disabled {
+    background-color: shade(@astramars_accent, 1.4);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Выделение в списках и полосы прогресса — тоже акцентом */
+progressbar progress,
+levelbar block.filled {
+    background-image: none;
+    background-color: @astramars_accent;
+    border-color: @astramars_accent_dark;
+}
+
+treeview:selected,
+row:selected,
+*:selected {
+    background-color: @astramars_accent;
+    color: white;
+}

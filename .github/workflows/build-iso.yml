@@ -44,7 +44,12 @@ jobs:
           (cd work && grep "SHA256 ($NAME)" CHECKSUM | sha256sum -c -)
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Встроить AstraMars в установщик (mkksiso)
+      - name: Получить код (оформление установщика)
+        uses: actions/checkout@v5
+        with:
+          path: repo
+
+      - name: Встроить AstraMars в установщик (kickstart и оформление)
         run: |
           set -euo pipefail
           # Проверка, что образ системы доступен без входа (иначе установка не скачает его)
@@ -53,19 +58,28 @@ jobs:
           # AstraMars OS: ставить систему из образа контейнера. Остальное установщик спросит сам.
           ostreecontainer --url=${IMAGE} --transport=registry --no-signature-verification
           EOF
+          cat > work/build.sh <<'SH'
+          set -euxo pipefail
+          dnf -y -q install lorax xorriso isomd5sum cpio gzip
+          # product.img: Anaconda распаковывает его поверх своей системы — название, стиль, картинки
+          mkdir -p /work/images
+          (cd /repo/installer/product && find . | cpio -o -H newc --quiet | gzip -9 > /work/images/product.img)
+          mkksiso --add /work/images --ks /work/astramars.ks "/work/$BASE_ISO" "/output/$OUT"
+          implantisomd5 --force "/output/$OUT" || true
+          # Проверки: kickstart, загрузчик знает о нём, оформление и система установщика на месте
+          xorriso -indev "/output/$OUT" -osirrox on             -extract /astramars.ks /tmp/check.ks -extract /EFI/BOOT/grub.cfg /tmp/grub.cfg             -extract /images/product.img /tmp/product.img
+          grep -q "ostreecontainer --url=$IMAGE" /tmp/check.ks
+          grep -q "inst.ks" /tmp/grub.cfg
+          xorriso -indev "/output/$OUT" -ls /images | tee /tmp/images.txt
+          grep -q "install.img" /tmp/images.txt
+          mkdir /tmp/p && (cd /tmp/p && gzip -dc /tmp/product.img | cpio -id --quiet)
+          grep -q "Product=AstraMars OS" /tmp/p/.buildstamp
+          test -s /tmp/p/usr/share/anaconda/pixmaps/astramars/astramars.css
+          grep -q "custom_stylesheet" /tmp/p/etc/anaconda/conf.d/90-astramars.conf
+          echo "kickstart и оформление в ISO: ок"
+          SH
           OUT="AstraMars-OS-$(date -u +%Y%m%d).iso"
-          sudo podman run --rm --privileged -v "$PWD/work:/work" -v "$PWD/output:/output" -w /work \
-            quay.io/fedora/fedora:${{ inputs.fedora || '44' }} bash -euxc "
-              dnf -y -q install lorax xorriso isomd5sum
-              mkksiso --ks astramars.ks '${{ steps.base.outputs.name }}' '/output/$OUT'
-              implantisomd5 '/output/$OUT' || true
-              # В ISO действительно лежит наш kickstart и загрузчик знает о нём
-              xorriso -indev '/output/$OUT' -osirrox on -extract /astramars.ks /tmp/check.ks
-              grep -q 'ostreecontainer --url=${IMAGE}' /tmp/check.ks
-              xorriso -indev '/output/$OUT' -osirrox on -extract /EFI/BOOT/grub.cfg /tmp/grub.cfg
-              grep -q 'inst.ks' /tmp/grub.cfg
-              echo 'kickstart в ISO: ок'
-            "
+          sudo podman run --rm --privileged             -v "$PWD/work:/work" -v "$PWD/output:/output" -v "$PWD/repo:/repo:ro"             -e IMAGE -e OUT="$OUT" -e BASE_ISO="${{ steps.base.outputs.name }}"             quay.io/fedora/fedora:${{ inputs.fedora || '44' }} bash /work/build.sh
           sudo chown -R "$(id -u)" output
           rm -f "work/${{ steps.base.outputs.name }}"
           ls -la output
