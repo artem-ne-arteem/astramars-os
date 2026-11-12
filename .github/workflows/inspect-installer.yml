@@ -29,14 +29,16 @@ jobs:
           ROOT=stage2
           # install.img может содержать вложенный образ LiveOS/rootfs.img
           if [ -f stage2/LiveOS/rootfs.img ]; then sudo mkdir -p /mnt/r && sudo mount -o loop,ro stage2/LiveOS/rootfs.img /mnt/r && ROOT=/mnt/r; fi
-          echo "=== Пакеты anaconda"; sudo rpm --root "$ROOT" -qa 2>/dev/null | grep -i "anaconda\|logos\|release" | sort || ls "$ROOT/usr/share" | head -50
-          echo "=== .buildstamp"; sudo cat "$ROOT/.buildstamp" || true
-          echo "=== product.d"; sudo ls "$ROOT/etc/anaconda/product.d/" || true
-          for f in "$ROOT"/etc/anaconda/product.d/*kinoite* "$ROOT"/etc/anaconda/product.d/fedora.conf; do echo "--- $f"; sudo cat "$f" || true; done
-          echo "=== pixmaps"; sudo find "$ROOT/usr/share/anaconda/pixmaps" -maxdepth 2 | head -60 || true
-          echo "=== webui"; sudo find "$ROOT/usr/share" -maxdepth 3 -iname "*webui*" | head || true
-          sudo ls "$ROOT/usr/share/cockpit" 2>/dev/null || true
-          echo "=== anaconda-gtk.css (классы оформления)"; sudo grep -n "background\|url(\|^\.\|^#\|^@define" "$ROOT/usr/share/anaconda/anaconda-gtk.css" | head -80 || true
-          echo "=== Где anaconda ищет оформление продукта"; sudo grep -rn "run/install/product\|anaconda-gtk.css" "$ROOT/usr/lib64/python3"*/site-packages/pyanaconda/ui/gui/__init__.py 2>/dev/null | head -20 || true
-          sudo grep -rln "product.img" "$ROOT/usr/lib/dracut" 2>/dev/null | head; true
-          sudo find stage2 / -path /proc -prune -o -name "anaconda-lib.sh" -print 2>/dev/null | head -2; true
+          PY="$(ls -d $ROOT/usr/lib64/python3*/site-packages/pyanaconda)"
+          echo "=== gui/__init__.py: оформление"; sed -n 715,775p "$PY/ui/gui/__init__.py"
+          echo "=== profile.d"; ls $ROOT/etc/anaconda/profile.d/
+          for f in $ROOT/etc/anaconda/profile.d/fedora-kinoite.conf $ROOT/etc/anaconda/profile.d/fedora.conf; do echo "--- $f"; cat "$f"; done
+          echo "=== fedora-atomic.css"; cat $ROOT/usr/share/anaconda/pixmaps/atomic/fedora-atomic.css
+          echo "=== fedora.css"; cat $ROOT/usr/share/anaconda/pixmaps/fedora.css
+          echo "=== anaconda-gtk.css 90-140"; sed -n 90,140p $ROOT/usr/share/anaconda/anaconda-gtk.css
+          echo "=== размеры картинок"; file $ROOT/usr/share/anaconda/pixmaps/atomic/*.png $ROOT/usr/share/anaconda/pixmaps/anaconda_header.png
+          echo "=== product.img в initrd"; xorriso -indev base.iso -osirrox on -extract /images/pxeboot/initrd.img initrd.img 2>/dev/null
+          mkdir ird && cd ird && (sudo /usr/lib/dracut/skipcpio ../initrd.img 2>/dev/null || cat ../initrd.img) | (zstd -dc 2>/dev/null || xz -dc) | sudo cpio -id --quiet 2>/dev/null; cd ..
+          sudo grep -rn "product.img\|run/install/product" ird/lib/dracut ird/usr/lib/dracut ird/lib/anaconda-lib.sh ird/usr/lib/anaconda-lib.sh 2>/dev/null | head -20
+          sudo find ird -name "*anaconda*" | head -20
+          echo "=== где используется product в stage2"; grep -rn "run/install/product" $PY | head -10
