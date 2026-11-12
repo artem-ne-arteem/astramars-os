@@ -46,11 +46,16 @@ using Microsoft.Win32.SafeHandles;
 public static class RawDisk {
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     static extern SafeFileHandle CreateFile(string name, uint access, uint share, IntPtr sec, uint disp, uint flags, IntPtr tmpl);
-    // Открыть физический диск для записи (FileStream сам такие пути не открывает)
+    // Открыть физический диск для записи (FileStream сам такие пути не открывает).
+    // Сквозная запись (WRITE_THROUGH) без NO_BUFFERING — не нужна выровненная в памяти область.
+    // Буфер FileStream 4096: записи по 4 МБ больше него и идут на диск напрямую.
     public static FileStream Open(int number) {
-        SafeFileHandle h = CreateFile(@"\\.\PhysicalDrive" + number, 0xC0000000, 0x3, IntPtr.Zero, 3, 0x80000000 | 0x20000000, IntPtr.Zero);
+        return OpenPath(@"\\.\PhysicalDrive" + number);
+    }
+    public static FileStream OpenPath(string path) {
+        SafeFileHandle h = CreateFile(path, 0xC0000000, 0x3, IntPtr.Zero, 3, 0x80000000, IntPtr.Zero);
         if (h.IsInvalid) throw new IOException("Не удалось открыть флешку для записи (код " + Marshal.GetLastWin32Error() + ")");
-        return new FileStream(h, FileAccess.ReadWrite, 0, false);
+        return new FileStream(h, FileAccess.ReadWrite, 4096, false);
     }
 }
 "@
