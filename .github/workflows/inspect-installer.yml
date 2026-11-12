@@ -1,0 +1,42 @@
+name: Разбор установщика Fedora (для оформления)
+
+# Вручную: показывает, какой интерфейс у Anaconda в установщике Kinoite и какие файлы оформления в нём есть.
+on:
+  workflow_dispatch:
+    inputs:
+      fedora:
+        description: Версия Fedora
+        default: "44"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Разобрать установщик
+        env:
+          REL: ${{ inputs.fedora }}
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq squashfs-tools xorriso > /dev/null
+          BASE="https://dl.fedoraproject.org/pub/fedora/linux/releases/${REL}/Kinoite/x86_64/iso"
+          NAME="$(curl -fsSL "$BASE/" | grep -o 'Fedora-Kinoite-ostree-x86_64-[0-9.-]*\.iso' | head -1)"
+          curl -fsSL --retry 5 -o base.iso "$BASE/$NAME"
+          echo "=== Корень ISO"; xorriso -indev base.iso -ls / 2>/dev/null
+          echo "=== /images"; xorriso -indev base.iso -ls /images 2>/dev/null
+          xorriso -indev base.iso -osirrox on -extract /EFI/BOOT/grub.cfg grub.cfg -extract /images/install.img install.img 2>/dev/null
+          echo "=== grub.cfg"; cat grub.cfg
+          sudo unsquashfs -q -d stage2 install.img
+          ROOT=stage2
+          # install.img может содержать вложенный образ LiveOS/rootfs.img
+          if [ -f stage2/LiveOS/rootfs.img ]; then sudo mkdir -p /mnt/r && sudo mount -o loop,ro stage2/LiveOS/rootfs.img /mnt/r && ROOT=/mnt/r; fi
+          echo "=== Пакеты anaconda"; sudo rpm --root "$ROOT" -qa 2>/dev/null | grep -i "anaconda\|logos\|release" | sort || ls "$ROOT/usr/share" | head -50
+          echo "=== .buildstamp"; sudo cat "$ROOT/.buildstamp" || true
+          echo "=== product.d"; sudo ls "$ROOT/etc/anaconda/product.d/" || true
+          for f in "$ROOT"/etc/anaconda/product.d/*kinoite* "$ROOT"/etc/anaconda/product.d/fedora.conf; do echo "--- $f"; sudo cat "$f" || true; done
+          echo "=== pixmaps"; sudo find "$ROOT/usr/share/anaconda/pixmaps" -maxdepth 2 | head -60 || true
+          echo "=== webui"; sudo find "$ROOT/usr/share" -maxdepth 3 -iname "*webui*" | head || true
+          sudo ls "$ROOT/usr/share/cockpit" 2>/dev/null || true
+          echo "=== anaconda-gtk.css (классы оформления)"; sudo grep -n "background\|url(\|^\.\|^#\|^@define" "$ROOT/usr/share/anaconda/anaconda-gtk.css" | head -80 || true
+          echo "=== Где anaconda ищет оформление продукта"; sudo grep -rn "run/install/product\|anaconda-gtk.css" "$ROOT/usr/lib64/python3"*/site-packages/pyanaconda/ui/gui/__init__.py 2>/dev/null | head -20 || true
+          sudo grep -rln "product.img" "$ROOT/usr/lib/dracut" 2>/dev/null | head; true
+          sudo find stage2 / -path /proc -prune -o -name "anaconda-lib.sh" -print 2>/dev/null | head -2; true
