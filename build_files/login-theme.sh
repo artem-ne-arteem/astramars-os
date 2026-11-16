@@ -38,7 +38,12 @@ fetch "$DOTO_BASE/Doto%5BROND,wght%5D.ttf" /usr/share/fonts/doto/Doto.ttf \
 fetch "$DOTO_BASE/OFL.txt" /usr/share/fonts/doto/OFL.txt \
     26a7b58bdba6cda8a78ca6e8b3791d8013b8abc6d5e6519f84193893aee02020
 fc-cache -f /usr/share/fonts/doto
-fc-list | grep -i doto
+# fc-list иногда не успевает увидеть только что добавленный шрифт (16.11 сборка упала на этом,
+# повтор прошёл) — тогда проверяем сам файл: fontconfig должен его прочитать и узнать семейство Doto
+if ! fc-list | grep -i doto; then
+    echo "fc-list не видит Doto — проверяю файл шрифта напрямую"
+    fc-scan --format '%{family}\n' /usr/share/fonts/doto/Doto.ttf | grep -i doto
+fi
 
 ### Подмена компонентов Breeze
 disable_theme() {
